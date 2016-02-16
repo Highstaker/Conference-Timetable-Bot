@@ -7,7 +7,7 @@ from telegramHigh import telegramHigh
 from textual_data import *
 from usersparams import UserParams
 
-VERSION_NUMBER = (0, 1, 0)
+VERSION_NUMBER = (0, 1, 1)
 
 # The folder containing the script itself
 SCRIPT_FOLDER = path.dirname(path.realpath(__file__))
@@ -16,6 +16,7 @@ INITIAL_SUBSCRIBER_PARAMS = {"lang": "EN",  # bot's langauge
 
 							}
 MAIN_MENU_KEY_MARKUP = [
+	[MAP_BUTTON],
 	[HELP_BUTTON, ABOUT_BUTTON, OTHER_BOTS_BUTTON],
 	[EN_LANG_BUTTON, RU_LANG_BUTTON]
 ]
@@ -91,6 +92,18 @@ class ConferenceTimetableBot(object):
 		elif message == "/otherbots" or message in allv(OTHER_BOTS_BUTTON):
 			bot.sendMessage(chat_id=chat_id
 							, message=lS(OTHER_BOTS_MESSAGE)
+							, key_markup=MMKM
+							)
+		elif message == "/map" or message in allv(MAP_BUTTON):
+			if path.isfile(path.join(SCRIPT_FOLDER, MAP_FILENAME)):
+				bot.sendPic(chat_id=chat_id
+						, pic=open(path.join(SCRIPT_FOLDER, MAP_FILENAME), "rb")
+						, caption=MAP_MESSAGE
+								)
+			else:
+				# There is no map file, notify user
+				bot.sendMessage(chat_id=chat_id
+							, message=lS(NO_MAP_FILE_MESSAGE)
 							, key_markup=MMKM
 							)
 		elif message == RU_LANG_BUTTON:
