@@ -1,11 +1,9 @@
 #!/usr/bin/python3 -u
 # -*- coding: utf-8 -*-
-
 import sqlite3
-
-# The folder containing the script itself
 from os import path
 
+# The folder containing the script itself
 SCRIPT_FOLDER = path.dirname(path.realpath(__file__))
 
 TABLE_NAME = "UserParams"
@@ -95,7 +93,7 @@ class UserParams(object):
 		try:
 			self._run_command(command)
 		except sqlite3.IntegrityError:
-			print("User with chat_id " + str(chat_id) + " already exists! Skipping creation!")
+			pass
 
 	def getEntry(self, chat_id, param):
 		"""
@@ -105,11 +103,7 @@ class UserParams(object):
 		:return: the parameter value
 		"""
 		command = "SELECT " + param + " FROM {0} WHERE chat_id=".format(TABLE_NAME) + str(chat_id) + ";"
-
-
 		data = self._run_command(command)
-
-
 		return data[0][0]
 
 	def setEntry(self, chat_id, param, value):

@@ -6,6 +6,7 @@
 ##############
 
 MAP_FILENAME = "map.png"
+EVENT_TIMETABLE_FILENAME = "timetable.txt"
 
 #############
 # TEXTS####

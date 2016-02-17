@@ -1,16 +1,21 @@
 #!/usr/bin/python3 -u
 # -*- coding: utf-8 -*-
+import os
 from os import path
 
 from languagesupport import LanguageSupport
 from telegramHigh import telegramHigh
 from textual_data import *
+from timetable import TimetableDatabase
 from usersparams import UserParams
 
-VERSION_NUMBER = (0, 1, 1)
+VERSION_NUMBER = (0, 1, 2)
 
 # The folder containing the script itself
 SCRIPT_FOLDER = path.dirname(path.realpath(__file__))
+
+# A temporary folder where files will be saved for processing
+TEMP_FOLDER = "/tmp"
 
 INITIAL_SUBSCRIBER_PARAMS = {"lang": "EN",  # bot's langauge
 
@@ -39,6 +44,7 @@ class ConferenceTimetableBot(object):
 		super(ConferenceTimetableBot, self).__init__()
 		self.bot = telegramHigh(BOT_TOKEN)
 		self.user_params = UserParams(filename="conference_timetable_userparams", initial=INITIAL_SUBSCRIBER_PARAMS)
+		self.timetable_db = TimetableDatabase("timetable")
 
 		# starts the main loop
 		self.bot.start(processingFunction=self.processUpdate
@@ -121,6 +127,25 @@ class ConferenceTimetableBot(object):
 			bot.sendMessage(chat_id=chat_id
 							, message="Bot messages will be shown in English."
 							, key_markup=key_markup
+							)
+
+		# admin tools
+		elif bot.isDocument(u):
+			# check if it is a timetable
+			if bot.getDocumentFileName(u) == EVENT_TIMETABLE_FILENAME:
+				full_path = path.join(TEMP_FOLDER, EVENT_TIMETABLE_FILENAME)
+				bot.downloadFile(bot.getFileID(u), full_path)
+
+				with open(full_path, "r") as f:
+					data = f.read()
+					print(data)
+					self.timetable_db.parseTimetable(data)
+
+				os.remove(full_path)
+
+				bot.sendMessage(chat_id=chat_id
+							, message="Events added!"
+							, key_markup=MMKM
 							)
 		else:
 			bot.sendMessage(chat_id=chat_id
