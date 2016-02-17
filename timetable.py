@@ -3,7 +3,7 @@
 
 import sqlite3
 import re
-import datetime
+from datetime import datetime
 
 from os import path
 
@@ -29,6 +29,10 @@ class TimetableDatabase(object):
 		else:
 			#database doesn't exist, create it
 			self.createTable()
+
+	@staticmethod
+	def isDate(data):
+		return bool(re.match("^[0-9]{4}/(0[1-9]|1[0-2])/(0[1-9]|1[0-9]|2[0-9]|3[0-1])$",data))
 
 	def parseTimetable(self, data):
 		"""
@@ -68,6 +72,56 @@ class TimetableDatabase(object):
 		for i in grouped_parse:
 			self.createEvent(date=i['date'], time=i['time'], name=i['name'], desc=i['desc'], location=i['location'])
 
+	def getDates(self):
+		command = "SELECT DISTINCT date FROM {0};".format(TABLE_NAME)
+
+		dates = self._run_command(command)
+
+		dates = [i[0] for i in dates]
+
+		return dates
+
+	def getTimetableMarkup(self):
+		"""
+		Returns a keyboard markup for a timetable showing depending on the days that are in the base
+		:return: List
+		"""
+		def split_list(alist,max_size=1):
+			"""Yield successive n-sized chunks from l."""
+			for i in range(0, len(alist), max_size):
+				yield alist[i:i+max_size]
+
+		dates = self.getDates()
+
+		markup = list(split_list(dates,3)) +[["All days"]]
+		print(markup)
+		return markup
+
+	def getDayTimetable(self, date):
+		"""
+		Returns a string representation of the timetable for the given date
+		:param date: YYYY/MM/DD
+		:return: string
+		"""
+		command = "SELECT time, name FROM {0} WHERE date='{1}';".format(TABLE_NAME, date)
+
+		data = self._run_command(command)
+		print("getDayTimetable", data)#debug
+
+		result = date + ":\n\n"
+		result += "\n".join([": ".join(i) for i in data])
+		result += "\n\n"
+
+		return result
+
+	def getAllDaysTimetable(self):
+		dates = self.getDates()
+
+		result = ""
+		for date in dates:
+			result += self.getDayTimetable(date)
+
+		return result
 
 
 	def createTable(self):
@@ -118,7 +172,7 @@ class TimetableDatabase(object):
 		return data
 
 if __name__ == '__main__':
-	T = TimetableDatabase("test002")
+	T = TimetableDatabase("timetable")
 
 	data = """##2016/02/16
 	#14:00@@Dinner@@Nomnom time@@Dining room
@@ -131,4 +185,5 @@ if __name__ == '__main__':
 
 	"""
 
-	T.parseTimetable(data)
+	# T.parseTimetable(data)
+

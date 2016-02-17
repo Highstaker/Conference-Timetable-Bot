@@ -115,8 +115,8 @@ class UserParams(object):
 		:return:
 		"""
 		command = "UPDATE " + TABLE_NAME + " SET " + str(param) + "=" \
-				  + ( ("'"+str(value)+"'") if isinstance(value, str) else str(value) )  \
-				  + " WHERE chat_id=" + str(chat_id) + ";"
+				+ ( ("'"+str(value)+"'") if isinstance(value, str) else str(value) )  \
+				+ " WHERE chat_id=" + str(chat_id) + ";"
 		self._run_command(command)
 
 	def _run_command(self, command):
