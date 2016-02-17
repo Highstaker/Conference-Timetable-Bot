@@ -97,19 +97,34 @@ class TimetableDatabase(object):
 		print(markup)
 		return markup
 
+	def getEventInfo(self,id):
+		command = "SELECT name, time, location, description FROM {0} WHERE id={1}".format(TABLE_NAME,id)
+		data = self._run_command(command)
+
+		result = """{0}
+Time: {1}
+Location: {2}
+
+{3}
+""".format(data[0][0],data[0][1],data[0][2],data[0][3])
+
+		return result
+
+
+
 	def getDayTimetable(self, date):
 		"""
 		Returns a string representation of the timetable for the given date
 		:param date: YYYY/MM/DD
 		:return: string
 		"""
-		command = "SELECT time, name FROM {0} WHERE date='{1}';".format(TABLE_NAME, date)
+		command = "SELECT id, time, name FROM {0} WHERE date='{1}';".format(TABLE_NAME, date)
 
 		data = self._run_command(command)
 		print("getDayTimetable", data)#debug
 
 		result = date + ":\n\n"
-		result += "\n".join([": ".join(i) for i in data])
+		result += "\n".join(["/event{0} {1} {2}".format(i[0], i[1], i[2]) for i in data])
 		result += "\n\n"
 
 		return result

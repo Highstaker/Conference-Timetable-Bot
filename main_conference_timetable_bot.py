@@ -1,6 +1,7 @@
 #!/usr/bin/python3 -u
 # -*- coding: utf-8 -*-
 import os
+import re
 from os import path
 
 from languagesupport import LanguageSupport
@@ -9,7 +10,7 @@ from textual_data import *
 from timetable import TimetableDatabase
 from usersparams import UserParams
 
-VERSION_NUMBER = (0, 1, 3)
+VERSION_NUMBER = (0, 1, 4)
 
 # The folder containing the script itself
 SCRIPT_FOLDER = path.dirname(path.realpath(__file__))
@@ -127,6 +128,12 @@ class ConferenceTimetableBot(object):
 			# it is a date, show day timetable
 			bot.sendMessage(chat_id=chat_id
 							, message=self.timetable_db.getAllDaysTimetable()
+							, key_markup=MMKM
+							)
+		elif re.match("^/event[0-9]+$",message):
+			# Event link is pressed
+			bot.sendMessage(chat_id=chat_id
+							, message=self.timetable_db.getEventInfo(message[6:])
 							, key_markup=MMKM
 							)
 		elif message == RU_LANG_BUTTON:
