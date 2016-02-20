@@ -166,7 +166,17 @@ Location: {2}
 
 		return result
 
+	def eventIndexExists(self, id):
+		"""
+		Returns True if an event with a given index exists
+		:param id: event ID
+		:return: bool
+		"""
+		command = "SELECT * FROM {0} WHERE id={1};".format(TABLE_NAME, id)
 
+		data = self._run_command(command)
+
+		return bool(data)
 
 	def getDayTimetable(self, date):
 		"""

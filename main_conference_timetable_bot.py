@@ -11,7 +11,7 @@ from textual_data import *
 from timetable import TimetableDatabase
 from usersparams import UserParams
 
-VERSION_NUMBER = (0, 2, 0)
+VERSION_NUMBER = (0, 2, 1)
 
 # The folder containing the script itself
 SCRIPT_FOLDER = path.dirname(path.realpath(__file__))
@@ -209,18 +209,27 @@ class ConferenceTimetableBot(object):
 							)
 		elif re.match("^/sub[0-9]+$",message):
 			event_index = message[4:]
-			if not self.timetable_db.subscriptionExists(chat_id, event_index):
-				self.timetable_db.addSubscription(chat_id, event_index)
-				bot.sendMessage(chat_id=chat_id
-								, message="You have subscribed to event {0}".format(event_index)
-								, key_markup=MMKM
-								)
+			if self.timetable_db.eventIndexExists(event_index):
+				# Event exists
+				if not self.timetable_db.subscriptionExists(chat_id, event_index):
+					self.timetable_db.addSubscription(chat_id, event_index)
+					bot.sendMessage(chat_id=chat_id
+									, message="You have subscribed to event {0}".format(event_index)
+									, key_markup=MMKM
+									)
+				else:
+					self.timetable_db.deleteSubscription(chat_id,event_index)
+					bot.sendMessage(chat_id=chat_id
+									, message="Subscription to event {0} deleted!".format(event_index)
+									, key_markup=MMKM
+									)
 			else:
-				self.timetable_db.deleteSubscription(chat_id,event_index)
+				# such event doesn't exist
 				bot.sendMessage(chat_id=chat_id
-								, message="Subscription to event {0} deleted!".format(event_index)
-								, key_markup=MMKM
-								)
+							, message="Event with index {0} doesn't exist!".format(event_index)
+							, key_markup=MMKM
+							, reply_to=message_id
+							)
 		elif re.match("^[0-9]+$",message):
 			self.user_params.setEntry(chat_id, 'remind_period', int(message))
 			bot.sendMessage(chat_id=chat_id
