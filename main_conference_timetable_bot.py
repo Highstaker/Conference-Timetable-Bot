@@ -11,7 +11,7 @@ from textual_data import *
 from timetable import TimetableDatabase
 from usersparams import UserParams
 
-VERSION_NUMBER = (0, 2, 1)
+VERSION_NUMBER = (0, 2, 2)
 
 # The folder containing the script itself
 SCRIPT_FOLDER = path.dirname(path.realpath(__file__))
@@ -21,13 +21,12 @@ TEMP_FOLDER = "/tmp"
 
 INITIAL_SUBSCRIBER_PARAMS = {"lang": "EN",  # bot's langauge
 							"Admin": 0,
-							 # "events_remind": "", #CSV of event IDs to remind about
 							 "remind_period": 0, # remind this amount of minutes before the event
 							 "subscribed": 0 # is the user subscribed to event reminders?
 							}
 MAIN_MENU_KEY_MARKUP = [
 	[MAP_BUTTON, GET_TIMETABLE_BUTTON],
-	[SUBSCRIBE_BUTTON, UNSUBSCRIBE_BUTTON],
+	[SUBSCRIBE_BUTTON, UNSUBSCRIBE_BUTTON, MY_EVENTS_BUTTON],
 	[HELP_BUTTON, ABOUT_BUTTON, OTHER_BOTS_BUTTON],
 	[EN_LANG_BUTTON, RU_LANG_BUTTON]
 ]
@@ -78,7 +77,7 @@ class ConferenceTimetableBot(object):
 			chat_id = event[0]
 			event_id = event[1]
 			status = event[2]
-			event_time = TimetableDatabase.stringTimeToDatetime(date=event[3], time=event[4])
+			event_time = TimetableDatabase.stringTimeToDatetime(event[3])
 
 			if status < 2:
 				# this event still has reminders
@@ -94,7 +93,7 @@ class ConferenceTimetableBot(object):
 				# preliminary reminder is not triggered yet
 				remind_period = self.user_params.getEntry(chat_id,'remind_period')
 				till_event_delta = event_time-datetime.now()
-				print("till_event_delta",till_event_delta)#debug
+				# print("till_event_delta",till_event_delta)#debug
 				if self.user_params.getEntry(chat_id,'subscribed') == 1 \
 					and till_event_delta.days >= 0 \
 					and till_event_delta.seconds <= remind_period * 60:
@@ -177,11 +176,19 @@ class ConferenceTimetableBot(object):
 							, message=self.timetable_db.getAllDaysTimetable()
 							, key_markup=MMKM
 							)
-		elif re.match("^/event[0-9]+$",message):
+		elif re.match("^/event[0-9]+$", message):
 			# Event link is pressed
-			bot.sendMessage(chat_id=chat_id
-							, message=self.timetable_db.getEventInfo(message[6:])
+			event_info = self.timetable_db.getEventInfo(message[6:])
+			if event_info:
+				bot.sendMessage(chat_id=chat_id
+							, message=event_info
 							, key_markup=MMKM
+							)
+			else:
+				bot.sendMessage(chat_id=chat_id
+							, message=lS(EVENT_NOT_FOUND_MESSAGE)
+							, key_markup=MMKM
+							, reply_to=message_id
 							)
 		elif message == "/subscribe" or message in allv(SUBSCRIBE_BUTTON):
 			if self.user_params.getEntry(chat_id, "subscribed") == 0:
@@ -207,6 +214,9 @@ class ConferenceTimetableBot(object):
 							, message=lS(ALREADY_UNSUBSCRIBED_MESSAGE)
 							, key_markup=MMKM
 							)
+		elif message == "my_events" or message in allv(MY_EVENTS_BUTTON):
+			# show a table of events to which a user is subscribed
+			self.timetable_db.getUserTimetable(chat_id=chat_id)
 		elif re.match("^/sub[0-9]+$",message):
 			event_index = message[4:]
 			if self.timetable_db.eventIndexExists(event_index):

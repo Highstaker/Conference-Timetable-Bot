@@ -1,10 +1,11 @@
-##2016/02/19
-	#14:00@@Dinner@@Nomnom time@@Dining room
-	#16:00@@Day nap@@ZZZZZ time@@Couch
-	#18:00@@Tea time@@Drinking tea@@Living room
-	##2016/02/20
-	 #14:00@@Dinner@@Nomnom time again@@Dining room
-	#15:59@@Day nap@@ZZZZZ time. AGAIN!@@Couch
-	  #18:00@@Tea time@@Drinking tea. As usual.@@Living room
-
+##2016-02-19
+	#14:00@@Dinner@@Nomnom time@@Dining room@@Da'wg
+	#16:00@@Day nap@@ZZZZZ time@@Couch@@Cat
+	#18:00@@Tea time@@Drinking tea@@Living room@@Hooman
+	##2016-02-20
+	 #14:00@@Dinner@@Nomnom time again@@Dining room@@Da'wg
+	#15:59@@Day nap@@ZZZZZ time.
+	YES! AGAIN!@@Couch@@Cat
+	  #18:00@@Tea time@@Drinking tea. As usual.@@Living room@@Hooman
+    #09:00@@waking up@@It's a "pain", really@@Bed, where else?@@Cat, Hooman
 	

@@ -35,7 +35,7 @@ class TimetableDatabase(object):
 
 	@staticmethod
 	def isDate(data):
-		return bool(re.match("^[0-9]{4}/(0[1-9]|1[0-2])/(0[1-9]|1[0-9]|2[0-9]|3[0-1])$",data))
+		return bool(re.match("^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|1[0-9]|2[0-9]|3[0-1])$",data))
 
 	def parseTimetable(self, data):
 		"""
@@ -49,12 +49,12 @@ class TimetableDatabase(object):
 		#17:30@@Event Name@@Event Description@@Event location
 		:return:
 		"""
-		print(data)#debug
+		# print(data)#debug
 		# Split lines
 		parse = data.split("\n")
 		# Removing empty lines and leading/trailing spaces/tabs/etc
 		parse = [i.strip(" \t\r") for i in parse if i.strip(" \t\r")]
-		print(parse)#debug
+		# print(parse)#debug
 
 		grouped_parse = []
 		date = None
@@ -63,20 +63,22 @@ class TimetableDatabase(object):
 				#it's a date, store it temporarily
 				print("date", i)#debug
 				date = i[2:]
-			elif re.match("^#([^#].*)",i):
+			elif re.match("^#([^#].*@@.*@@.*@@.*@@.*)",i):
 				print("event", i)#debug
 				# it's an event, parse it with the current stored date
 				if date:
 					event = i[1:].split("@@")
-					grouped_parse += [dict(date=date, time=event[0], name=event[1], desc=event[2], location=event[3])]
+					grouped_parse += [dict(date=date, time=event[0],
+										name=event[1], desc=event[2], location=event[3], author=event[4])]
 
-		print(grouped_parse)#debug
+		print('grouped_parse', grouped_parse)#debug
 
 		for i in grouped_parse:
-			self.createEvent(date=i['date'], time=i['time'], name=i['name'], desc=i['desc'], location=i['location'])
+			self.createEvent(date=i['date'], time=i['time'], name=i['name'],
+							 desc=i['desc'], location=i['location'], author=i['author'])
 
 	def getDates(self):
-		command = "SELECT DISTINCT date FROM {0};".format(TABLE_NAME)
+		command = "SELECT DISTINCT date(event_time) FROM {0};".format(TABLE_NAME)
 
 		dates = self._run_command(command)
 
@@ -121,20 +123,24 @@ WHERE chat_id={2} AND event_id={3};""".format(SUBSCRIPTIONS_TABLE_NAME,status,ch
 		:param id: even ID
 		:return:
 		"""
-		command = "SELECT name, time, location, description, date FROM {0} WHERE id={1};".format(TABLE_NAME,id)
+		command = """SELECT event_name, time(event_time), location, description, date(event_time), author
+				  FROM {0} WHERE id={1};""".format(TABLE_NAME,id)
 		data = self._run_command(command)
 
-		return dict(id=id,name=data[0][0],time=data[0][1],location=data[0][2],desc=data[0][3],date=data[0][4])
+		if data:
+			return dict(id=id,name=data[0][0],time=data[0][1][:5],  # time without seconds
+					location=data[0][2],desc=data[0][3],date=data[0][4],author=data[0][5])
+		else:
+			return None
 
 	@staticmethod
-	def stringTimeToDatetime(date, time):
+	def stringTimeToDatetime(strdatetime):
 		"""
 		Converts the date and time as strings into `datetime` object
-		:param date: date in "YYYY/MM/DD" format
-		:param time: time in 24-hour "HH:MM" format
+		:param strdatetime: string representation of date and time in "YYYY-MM-DD HH:MM" format
 		:return: `datetime` object
 		"""
-		return datetime.strptime(date + " " + time, "%Y/%m/%d %H:%M")
+		return datetime.strptime(strdatetime, "%Y-%m-%d %H:%M")
 
 	def getEventDatetime(self, id):
 		"""
@@ -144,7 +150,7 @@ WHERE chat_id={2} AND event_id={3};""".format(SUBSCRIPTIONS_TABLE_NAME,status,ch
 		"""
 		data = self.getEventData(id)
 
-		result = self.stringTimeToDatetime(date=data['date'],time=data['time'])
+		result = self.stringTimeToDatetime(data['date'] + " " + data['time'])
 		return result
 
 	def getEventInfo(self, id):
@@ -155,14 +161,18 @@ WHERE chat_id={2} AND event_id={3};""".format(SUBSCRIPTIONS_TABLE_NAME,status,ch
 		"""
 		data = self.getEventData(id)
 
-		result = """{0}
+		if data:
+			result = """{0}
 Time: {1} {4}
+Held by: {5}
 Location: {2}
 
 {3}
 
-/sub{5}
-""".format(data['name'], data['time'],data['location'],data['desc'],data['date'],id)
+/sub{6}
+""".format(data['name'], data['time'][:5],data['location'],data['desc'],data['date'],data['author'],id)
+		else:
+			result = None
 
 		return result
 
@@ -181,10 +191,12 @@ Location: {2}
 	def getDayTimetable(self, date):
 		"""
 		Returns a string representation of the timetable for the given date
-		:param date: YYYY/MM/DD
+		:param date: YYYY-MM-DD
 		:return: string
 		"""
-		command = "SELECT id, time, name FROM {0} WHERE date='{1}';".format(TABLE_NAME, date)
+		command = """SELECT id, event_time, event_name FROM {0}
+WHERE date(event_time)=date('{1}')
+ORDER BY time(event_time);""".format(TABLE_NAME, date)
 
 		data = self._run_command(command)
 		print("getDayTimetable", data)#debug
@@ -194,6 +206,32 @@ Location: {2}
 		result += "\n\n"
 
 		return result
+
+	def getUserTimetableData(self, chat_id):
+		"""
+		Returns brief data for events a given user has subscribed to.
+		:param chat_id: user ID
+		:return: list of tuples [(event ID, name, time, date),...]
+		"""
+		command = """SELECT id, event_name, event_time FROM {0} JOIN {1} ON {0}.id={1}.event_id AND {1}.chat_id={2}
+ORDER BY date(event_time) DESC;
+""".format(TABLE_NAME, SUBSCRIPTIONS_TABLE_NAME, chat_id)
+
+		data = self._run_command(command)
+
+		print('getUserTimetable', data)#debug
+
+		return data
+
+	def getUserTimetable(self, chat_id):
+		"""
+		Returns a string representation of timetable of events a given user has subscribed to.
+		:param chat_id: user ID
+		:return: string timetable
+		"""
+		data = self.getUserTimetableData(chat_id)
+
+
 
 	def getAllDaysTimetable(self):
 		dates = self.getDates()
@@ -212,11 +250,11 @@ Location: {2}
 		"""
 		# Create the table of events
 		command = """CREATE TABLE {0}(id INTEGER PRIMARY KEY,
-								date TEXT,
-								time TEXT,
-								name TEXT,
+								event_time TEXT,
+								event_name TEXT,
 								description TEXT,
-								location TEXT
+								location TEXT,
+								author TEXT
 								);""".format(TABLE_NAME)
 
 		self._run_command(command)
@@ -230,7 +268,7 @@ Location: {2}
 		self._run_command(command)
 
 	def getUnnotifiedSubscriptions(self):
-		command = """SELECT {0}.*,{1}.date,{1}.time FROM {0}
+		command = """SELECT {0}.chat_id, {0}.event_id, {0}.status, {1}.event_time FROM {0}
 JOIN {1} ON {0}.event_id={1}.id
 WHERE status!=2;""".format(SUBSCRIPTIONS_TABLE_NAME, TABLE_NAME)
 
@@ -245,8 +283,13 @@ WHERE status!=2;""".format(SUBSCRIPTIONS_TABLE_NAME, TABLE_NAME)
 		:param event_id: event ID
 		:return:
 		"""
-		command = "INSERT INTO {0}(chat_id, event_id, status) VALUES ({1},{2},0);".format(SUBSCRIPTIONS_TABLE_NAME,
-																						chat_id, event_id)
+		status = 0
+		event_time = self.getEventDatetime(event_id)
+		if (datetime.now()-event_time).days >= 0:
+			status = 2
+
+		command = "INSERT INTO {0}(chat_id, event_id, status) VALUES ({1},{2},{3});".format(SUBSCRIPTIONS_TABLE_NAME,
+																						chat_id, event_id, status)
 		self._run_command(command)
 
 	def subscriptionExists(self, chat_id, event_id):
@@ -275,7 +318,7 @@ WHERE status!=2;""".format(SUBSCRIPTIONS_TABLE_NAME, TABLE_NAME)
 
 		self._run_command(command)
 
-	def createEvent(self, date, time, name, desc, location):
+	def createEvent(self, date, time, name, desc, location, author):
 		"""
 		Creates a database entry for an even with the given parameters
 		:param date:
@@ -283,11 +326,20 @@ WHERE status!=2;""".format(SUBSCRIPTIONS_TABLE_NAME, TABLE_NAME)
 		:param name:
 		:param desc:
 		:param location:
+		:param author:
 		:return:
 		"""
+		def pS(text):
+			# process strings for compatibility with SQLite
+			result = text.replace("'", "''")
+			return result
 
-		command = """INSERT INTO {0}(date, time, name, description, location) VALUES ('{1}','{2}','{3}','{4}','{5}');
-		""".format(TABLE_NAME, date, time, name, desc, location)
+
+		timestamp = date + " " + time
+
+		command = """INSERT INTO {0}(event_time, event_name, description, location, author)
+VALUES ('{1}','{2}','{3}','{4}','{5}');
+		""".format(TABLE_NAME, timestamp, pS(name), pS(desc), pS(location), pS(author))
 		print(command)#debug
 
 		self._run_command(command)

@@ -21,6 +21,7 @@ GET_TIMETABLE_BUTTON = {"EN": "Show timetable", "RU": "Показать расп
 ALL_DAYS_BUTTON = {"EN": "All days", "RU": "Все дни"}
 SUBSCRIBE_BUTTON = {"EN": "Subscribe", "RU": "Подписаться"}
 UNSUBSCRIBE_BUTTON = {"EN": "Unsubscribe", "RU": "Отписаться"}
+MY_EVENTS_BUTTON = {"EN": "My events", "RU": "Мой список событий"}
 
 EN_LANG_BUTTON = "🇬🇧 EN"
 RU_LANG_BUTTON = "🇷🇺 RU"
@@ -36,6 +37,7 @@ SUBSCRIBED_MESSAGE = "You have subscribed to event reminders."
 ALREADY_SUBSCRIBED_MESSAGE = "You are already subscribed!"
 UNSUBSCRIBED_MESSAGE = "You have unsubscribed to event reminders."
 ALREADY_UNSUBSCRIBED_MESSAGE = "You are already unsubscribed!"
+EVENT_NOT_FOUND_MESSAGE = {"EN": "Event not found!", "RU": "Мероприятие не найдено!"}
 
 ##################
 # DICTIONARIES####
