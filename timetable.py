@@ -11,7 +11,10 @@ from os import path
 SCRIPT_FOLDER = path.dirname(path.realpath(__file__))
 
 TABLE_NAME = "Events"
+SUBSCRIPTIONS_TABLE_NAME = "Subscriptions"
 
+
+# noinspection SqlDialectInspection,SqlNoDataSourceInspection
 class TimetableDatabase(object):
 	"""docstring for TimetableDatabase"""
 	def __init__(self, filename):
@@ -28,7 +31,7 @@ class TimetableDatabase(object):
 			pass
 		else:
 			#database doesn't exist, create it
-			self.createTable()
+			self._createTable()
 
 	@staticmethod
 	def isDate(data):
@@ -97,16 +100,69 @@ class TimetableDatabase(object):
 		print(markup)
 		return markup
 
-	def getEventInfo(self,id):
-		command = "SELECT name, time, location, description FROM {0} WHERE id={1}".format(TABLE_NAME,id)
+	def setReminderStatus(self, chat_id, event_id, status):
+		"""
+		Sets the status of the reminder for current user and and event
+		:param chat_id: user ID
+		:param event_id:
+		:param status: 0 = neither preliminary reminder nor the on-time one has been triggered
+		1 = preliminary reminder has been triggered, on-time has not
+		2 = bot reminders have been triggered already
+		:return:
+		"""
+		command = """UPDATE {0} SET status={1}
+WHERE chat_id={2} AND event_id={3};""".format(SUBSCRIPTIONS_TABLE_NAME,status,chat_id,event_id)
+
+		self._run_command(command)
+
+	def getEventData(self, id):
+		"""
+		Returns all teh data for a given event
+		:param id: even ID
+		:return:
+		"""
+		command = "SELECT name, time, location, description, date FROM {0} WHERE id={1};".format(TABLE_NAME,id)
 		data = self._run_command(command)
 
+		return dict(id=id,name=data[0][0],time=data[0][1],location=data[0][2],desc=data[0][3],date=data[0][4])
+
+	@staticmethod
+	def stringTimeToDatetime(date, time):
+		"""
+		Converts the date and time as strings into `datetime` object
+		:param date: date in "YYYY/MM/DD" format
+		:param time: time in 24-hour "HH:MM" format
+		:return: `datetime` object
+		"""
+		return datetime.strptime(date + " " + time, "%Y/%m/%d %H:%M")
+
+	def getEventDatetime(self, id):
+		"""
+		Returns the time of an event as a datetime object
+		:param id: event ID
+		:return: datetime object
+		"""
+		data = self.getEventData(id)
+
+		result = self.stringTimeToDatetime(date=data['date'],time=data['time'])
+		return result
+
+	def getEventInfo(self, id):
+		"""
+		Returns a string representation of a detailed even information
+		:param id: event ID
+		:return: string
+		"""
+		data = self.getEventData(id)
+
 		result = """{0}
-Time: {1}
+Time: {1} {4}
 Location: {2}
 
 {3}
-""".format(data[0][0],data[0][1],data[0][2],data[0][3])
+
+/sub{5}
+""".format(data['name'], data['time'],data['location'],data['desc'],data['date'],id)
 
 		return result
 
@@ -139,11 +195,12 @@ Location: {2}
 		return result
 
 
-	def createTable(self):
+	def _createTable(self):
 		"""
 		Initializes the database and the timetable
 		:return:
 		"""
+		# Create the table of events
 		command = """CREATE TABLE {0}(id INTEGER PRIMARY KEY,
 								date TEXT,
 								time TEXT,
@@ -151,6 +208,60 @@ Location: {2}
 								description TEXT,
 								location TEXT
 								);""".format(TABLE_NAME)
+
+		self._run_command(command)
+
+		# Create the table of subscriptions
+		command = """CREATE TABLE {0}(chat_id INTEGER,
+								event_id INTEGER,
+								status INTEGER
+								);""".format(SUBSCRIPTIONS_TABLE_NAME)
+
+		self._run_command(command)
+
+	def getUnnotifiedSubscriptions(self):
+		command = """SELECT {0}.*,{1}.date,{1}.time FROM {0}
+JOIN {1} ON {0}.event_id={1}.id
+WHERE status!=2;""".format(SUBSCRIPTIONS_TABLE_NAME, TABLE_NAME)
+
+		data = self._run_command(command)
+		print("getUnnotifiedSubscriptions", data)#debug
+		return data
+
+	def addSubscription(self, chat_id, event_id):
+		"""
+		Adds a subscription for reminders for given user and event
+		:param chat_id: user ID
+		:param event_id: event ID
+		:return:
+		"""
+		command = "INSERT INTO {0}(chat_id, event_id, status) VALUES ({1},{2},0);".format(SUBSCRIPTIONS_TABLE_NAME,
+																						chat_id, event_id)
+		self._run_command(command)
+
+	def subscriptionExists(self, chat_id, event_id):
+		"""
+		Returns True if a user is subscribed to a given event
+		:param chat_id:
+		:param event_id:
+		:return: bool
+		"""
+		command = "SELECT * FROM {0} " \
+				  "WHERE chat_id={1} AND event_id={2};".format(SUBSCRIPTIONS_TABLE_NAME, chat_id, event_id)
+
+		data = self._run_command(command)
+
+		return bool(data)
+
+	def deleteSubscription(self, chat_id, event_id):
+		"""
+		Deletes a subscription for a given event for a user
+		:param chat_id:
+		:param event_id:
+		:return:
+		"""
+		command = "DELETE FROM {0} " \
+				  "WHERE chat_id={1} AND event_id={2};".format(SUBSCRIPTIONS_TABLE_NAME, chat_id, event_id)
 
 		self._run_command(command)
 
@@ -165,8 +276,7 @@ Location: {2}
 		:return:
 		"""
 
-		# unix_time = datetime.datetime.strptime(timedate,"%Y-%m-%d %H:%M")
-		command = """INSERT INTO {0}(date, time, name, description, location) VALUES ('{1}','{2}','{3}','{4}','{5}')
+		command = """INSERT INTO {0}(date, time, name, description, location) VALUES ('{1}','{2}','{3}','{4}','{5}');
 		""".format(TABLE_NAME, date, time, name, desc, location)
 		print(command)#debug
 

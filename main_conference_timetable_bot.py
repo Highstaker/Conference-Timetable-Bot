@@ -3,6 +3,7 @@
 import os
 import re
 from os import path
+from datetime import datetime
 
 from languagesupport import LanguageSupport
 from telegramHigh import telegramHigh
@@ -10,7 +11,7 @@ from textual_data import *
 from timetable import TimetableDatabase
 from usersparams import UserParams
 
-VERSION_NUMBER = (0, 1, 4)
+VERSION_NUMBER = (0, 2, 0)
 
 # The folder containing the script itself
 SCRIPT_FOLDER = path.dirname(path.realpath(__file__))
@@ -19,10 +20,14 @@ SCRIPT_FOLDER = path.dirname(path.realpath(__file__))
 TEMP_FOLDER = "/tmp"
 
 INITIAL_SUBSCRIBER_PARAMS = {"lang": "EN",  # bot's langauge
-
+							"Admin": 0,
+							 # "events_remind": "", #CSV of event IDs to remind about
+							 "remind_period": 0, # remind this amount of minutes before the event
+							 "subscribed": 0 # is the user subscribed to event reminders?
 							}
 MAIN_MENU_KEY_MARKUP = [
 	[MAP_BUTTON, GET_TIMETABLE_BUTTON],
+	[SUBSCRIBE_BUTTON, UNSUBSCRIBE_BUTTON],
 	[HELP_BUTTON, ABOUT_BUTTON, OTHER_BOTS_BUTTON],
 	[EN_LANG_BUTTON, RU_LANG_BUTTON]
 ]
@@ -49,8 +54,8 @@ class ConferenceTimetableBot(object):
 
 		# starts the main loop
 		self.bot.start(processingFunction=self.processUpdate
-					# ,periodicFunction=self.periodicFunction
-					# ,termination_function=self.termination_function
+					, periodicFunction=self.periodicFunction
+					# , termination_function=self.termination_function
 					)
 
 	def assignBotLanguage(self, chat_id, language):
@@ -61,6 +66,48 @@ class ConferenceTimetableBot(object):
 		:return: None
 		"""
 		self.user_params.setEntry(chat_id=chat_id, param="lang", value=language)
+
+	def periodicFunction(self):
+		bot = self.bot
+
+		# process reminders
+		# Get reminder data from DB
+		reminders = self.timetable_db.getUnnotifiedSubscriptions()
+
+		for event in reminders:
+			chat_id = event[0]
+			event_id = event[1]
+			status = event[2]
+			event_time = TimetableDatabase.stringTimeToDatetime(date=event[3], time=event[4])
+
+			if status < 2:
+				# this event still has reminders
+				if (datetime.now()-event_time).days >= 0:
+					# Remind when an event starts
+					if self.user_params.getEntry(chat_id, 'subscribed') == 1:
+						bot.sendMessage(chat_id=chat_id
+									, message="Event {0} is starting now!".format(event_id)
+									, key_markup="Same"
+							)
+					self.timetable_db.setReminderStatus(chat_id, event_id, 2)
+			if status < 1:
+				# preliminary reminder is not triggered yet
+				remind_period = self.user_params.getEntry(chat_id,'remind_period')
+				till_event_delta = event_time-datetime.now()
+				print("till_event_delta",till_event_delta)#debug
+				if self.user_params.getEntry(chat_id,'subscribed') == 1 \
+					and till_event_delta.days >= 0 \
+					and till_event_delta.seconds <= remind_period * 60:
+					# Set status to 1 and trigger preliminary reminder
+					self.timetable_db.setReminderStatus(chat_id, event_id, 1)
+					bot.sendMessage(chat_id=chat_id
+									, message="Event {0} is starting in {1} minutes!".format(event_id,till_event_delta.seconds//60)
+									, key_markup="Same"
+							)
+
+
+			#Cleanup of all status 2
+
 
 	def processUpdate(self, u):
 		bot = self.bot
@@ -134,6 +181,50 @@ class ConferenceTimetableBot(object):
 			# Event link is pressed
 			bot.sendMessage(chat_id=chat_id
 							, message=self.timetable_db.getEventInfo(message[6:])
+							, key_markup=MMKM
+							)
+		elif message == "/subscribe" or message in allv(SUBSCRIBE_BUTTON):
+			if self.user_params.getEntry(chat_id, "subscribed") == 0:
+				self.user_params.setEntry(chat_id, "subscribed", 1)
+				bot.sendMessage(chat_id=chat_id
+							, message=lS(SUBSCRIBED_MESSAGE)
+							, key_markup=MMKM
+							)
+			else:
+				bot.sendMessage(chat_id=chat_id
+							, message=lS(ALREADY_SUBSCRIBED_MESSAGE)
+							, key_markup=MMKM
+							)
+		elif message == "/unsubscribe" or message in allv(UNSUBSCRIBE_BUTTON):
+			if self.user_params.getEntry(chat_id, "subscribed") == 1:
+				self.user_params.setEntry(chat_id, "subscribed", 0)
+				bot.sendMessage(chat_id=chat_id
+							, message=lS(UNSUBSCRIBED_MESSAGE)
+							, key_markup=MMKM
+							)
+			else:
+				bot.sendMessage(chat_id=chat_id
+							, message=lS(ALREADY_UNSUBSCRIBED_MESSAGE)
+							, key_markup=MMKM
+							)
+		elif re.match("^/sub[0-9]+$",message):
+			event_index = message[4:]
+			if not self.timetable_db.subscriptionExists(chat_id, event_index):
+				self.timetable_db.addSubscription(chat_id, event_index)
+				bot.sendMessage(chat_id=chat_id
+								, message="You have subscribed to event {0}".format(event_index)
+								, key_markup=MMKM
+								)
+			else:
+				self.timetable_db.deleteSubscription(chat_id,event_index)
+				bot.sendMessage(chat_id=chat_id
+								, message="Subscription to event {0} deleted!".format(event_index)
+								, key_markup=MMKM
+								)
+		elif re.match("^[0-9]+$",message):
+			self.user_params.setEntry(chat_id, 'remind_period', int(message))
+			bot.sendMessage(chat_id=chat_id
+							, message="Preliminary reminder period has been set to {0}".format(message)
 							, key_markup=MMKM
 							)
 		elif message == RU_LANG_BUTTON:

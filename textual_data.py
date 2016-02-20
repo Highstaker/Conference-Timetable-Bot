@@ -19,6 +19,8 @@ OTHER_BOTS_BUTTON = {"EN": "👾 My other bots", "RU": "👾 Другие мои
 MAP_BUTTON = {"EN": "Map", "RU": "Карта"}
 GET_TIMETABLE_BUTTON = {"EN": "Show timetable", "RU": "Показать расписание"}
 ALL_DAYS_BUTTON = {"EN": "All days", "RU": "Все дни"}
+SUBSCRIBE_BUTTON = {"EN": "Subscribe", "RU": "Подписаться"}
+UNSUBSCRIBE_BUTTON = {"EN": "Unsubscribe", "RU": "Отписаться"}
 
 EN_LANG_BUTTON = "🇬🇧 EN"
 RU_LANG_BUTTON = "🇷🇺 RU"
@@ -30,6 +32,10 @@ OTHER_BOTS_MESSAGE = "Other bots"
 MAP_MESSAGE = "Map message"
 NO_MAP_FILE_MESSAGE = {"EN": "No map found", "RU": "Карта не найдена"}
 GET_TIMETABLE_MESSAGE = {"EN": "Choose a day", "RU": "Выберите день"}
+SUBSCRIBED_MESSAGE = "You have subscribed to event reminders."
+ALREADY_SUBSCRIBED_MESSAGE = "You are already subscribed!"
+UNSUBSCRIBED_MESSAGE = "You have unsubscribed to event reminders."
+ALREADY_UNSUBSCRIBED_MESSAGE = "You are already unsubscribed!"
 
 ##################
 # DICTIONARIES####
