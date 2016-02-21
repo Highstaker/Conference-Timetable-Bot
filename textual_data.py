@@ -5,6 +5,8 @@
 # FILENAMES###
 ##############
 
+SERVER_PARAMS_SAVEFILE_NAME = "Conference_timetable_bot_server_parameters.save"
+
 MAP_FILENAME = "map.png"
 EVENT_TIMETABLE_FILENAME = "timetable.txt"
 
@@ -38,6 +40,7 @@ ALREADY_SUBSCRIBED_MESSAGE = "You are already subscribed!"
 UNSUBSCRIBED_MESSAGE = "You have unsubscribed to event reminders."
 ALREADY_UNSUBSCRIBED_MESSAGE = "You are already unsubscribed!"
 EVENT_NOT_FOUND_MESSAGE = {"EN": "Event not found!", "RU": "Мероприятие не найдено!"}
+CURRENT_TIME_MESSAGE = {"EN": "Current time: {0}", "RU": "Текущее время: {0}"}
 
 ##################
 # DICTIONARIES####

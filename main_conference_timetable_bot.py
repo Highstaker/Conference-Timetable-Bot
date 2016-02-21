@@ -3,15 +3,16 @@
 import os
 import re
 from os import path
-from datetime import datetime
+# from datetime import datetime
 
 from languagesupport import LanguageSupport
+from serverparams import ServerParameters
 from telegramHigh import telegramHigh
 from textual_data import *
 from timetable import TimetableDatabase
 from usersparams import UserParams
 
-VERSION_NUMBER = (0, 2, 2)
+VERSION_NUMBER = (0, 2, 3)
 
 # The folder containing the script itself
 SCRIPT_FOLDER = path.dirname(path.realpath(__file__))
@@ -24,6 +25,11 @@ INITIAL_SUBSCRIBER_PARAMS = {"lang": "EN",  # bot's langauge
 							 "remind_period": 0, # remind this amount of minutes before the event
 							 "subscribed": 0 # is the user subscribed to event reminders?
 							}
+
+INITIAL_SERVER_PARAMS = {
+						"timezone": 0
+						}
+
 MAIN_MENU_KEY_MARKUP = [
 	[MAP_BUTTON, GET_TIMETABLE_BUTTON],
 	[SUBSCRIBE_BUTTON, UNSUBSCRIBE_BUTTON, MY_EVENTS_BUTTON],
@@ -47,9 +53,12 @@ class ConferenceTimetableBot(object):
 	"""docstring for ConferenceTimetableBot"""
 	def __init__(self):
 		super(ConferenceTimetableBot, self).__init__()
+		self.server_params = ServerParameters(savefile_name=SERVER_PARAMS_SAVEFILE_NAME,
+											  initial_params=INITIAL_SERVER_PARAMS
+											  )
 		self.bot = telegramHigh(BOT_TOKEN)
 		self.user_params = UserParams(filename="conference_timetable_userparams", initial=INITIAL_SUBSCRIBER_PARAMS)
-		self.timetable_db = TimetableDatabase("timetable")
+		self.timetable_db = TimetableDatabase("timetable",self.server_params)
 
 		# starts the main loop
 		self.bot.start(processingFunction=self.processUpdate
@@ -78,10 +87,11 @@ class ConferenceTimetableBot(object):
 			event_id = event[1]
 			status = event[2]
 			event_time = TimetableDatabase.stringTimeToDatetime(event[3])
+			cur_time = self.timetable_db.getOffsetTime()
 
 			if status < 2:
 				# this event still has reminders
-				if (datetime.now()-event_time).days >= 0:
+				if (cur_time-event_time).days >= 0:
 					# Remind when an event starts
 					if self.user_params.getEntry(chat_id, 'subscribed') == 1:
 						bot.sendMessage(chat_id=chat_id
@@ -92,7 +102,7 @@ class ConferenceTimetableBot(object):
 			if status < 1:
 				# preliminary reminder is not triggered yet
 				remind_period = self.user_params.getEntry(chat_id,'remind_period')
-				till_event_delta = event_time-datetime.now()
+				till_event_delta = event_time-cur_time
 				# print("till_event_delta",till_event_delta)#debug
 				if self.user_params.getEntry(chat_id,'subscribed') == 1 \
 					and till_event_delta.days >= 0 \
@@ -166,22 +176,32 @@ class ConferenceTimetableBot(object):
 							)
 		elif TimetableDatabase.isDate(message):
 			# it is a date, show day timetable
+			response = lS(CURRENT_TIME_MESSAGE).format(self.timetable_db.getOffsetTime().strftime("%H:%M")) \
+			+ "\n\n" \
+			+ self.timetable_db.getDayTimetable(message)
 			bot.sendMessage(chat_id=chat_id
-							, message=self.timetable_db.getDayTimetable(message)
+							, message=response
 							, key_markup=MMKM
 							)
 		elif message in allv(ALL_DAYS_BUTTON):
 			# it is a date, show day timetable
+			response = lS(CURRENT_TIME_MESSAGE).format(self.timetable_db.getOffsetTime().strftime("%H:%M")) \
+			+ "\n\n" \
+			+ self.timetable_db.getAllDaysTimetable()
+
 			bot.sendMessage(chat_id=chat_id
-							, message=self.timetable_db.getAllDaysTimetable()
+							, message=response
 							, key_markup=MMKM
 							)
 		elif re.match("^/event[0-9]+$", message):
 			# Event link is pressed
 			event_info = self.timetable_db.getEventInfo(message[6:])
 			if event_info:
+				response = lS(CURRENT_TIME_MESSAGE).format(self.timetable_db.getOffsetTime().strftime("%H:%M")) \
+				+ "\n\n" \
+				+ event_info
 				bot.sendMessage(chat_id=chat_id
-							, message=event_info
+							, message=response
 							, key_markup=MMKM
 							)
 			else:
@@ -279,6 +299,14 @@ class ConferenceTimetableBot(object):
 
 				bot.sendMessage(chat_id=chat_id
 							, message="Events added!"
+							, key_markup=MMKM
+							)
+		elif re.match("^TZ(\+|-)([0-9]|[0-1][0-9]|2[0-3])$", message):
+			# Setting the timezone parameter
+			timezone = int(message[2:])
+			self.server_params.setParam('timezone', timezone)
+			bot.sendMessage(chat_id=chat_id
+							, message="Timezone set to UTC{0}{1}".format("+" if timezone >= 0 else "", timezone)
 							, key_markup=MMKM
 							)
 		else:

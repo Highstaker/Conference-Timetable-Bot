@@ -3,7 +3,7 @@
 
 import sqlite3
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from os import path
 
@@ -17,13 +17,14 @@ SUBSCRIPTIONS_TABLE_NAME = "Subscriptions"
 # noinspection SqlDialectInspection,SqlNoDataSourceInspection
 class TimetableDatabase(object):
 	"""docstring for TimetableDatabase"""
-	def __init__(self, filename):
+	def __init__(self, filename, server_params):
 		"""
 
 		:param filename: name of database file without extension
 		:return:
 		"""
 		super(TimetableDatabase, self).__init__()
+		self.server_params = server_params
 		self.filename = filename + ".db"
 
 		# if database already exists, do nothnig
@@ -36,6 +37,22 @@ class TimetableDatabase(object):
 	@staticmethod
 	def isDate(data):
 		return bool(re.match("^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|1[0-9]|2[0-9]|3[0-1])$",data))
+
+	@staticmethod
+	def getUTCdatetime():
+		"""
+		Returns the UTC time as a datetime object
+		:return: datetime object
+		"""
+		return datetime.utcnow()
+
+	def getOffsetTime(self):
+		"""
+		Returns a timedate object representing the current time with the offset from UTC specified in server parameters.
+		Basically, this is the manually set server time.
+		:return: datetime object
+		"""
+		return self.getUTCdatetime() + timedelta(hours=self.server_params.getParam('timezone'))
 
 	def parseTimetable(self, data):
 		"""
@@ -285,7 +302,7 @@ WHERE status!=2;""".format(SUBSCRIPTIONS_TABLE_NAME, TABLE_NAME)
 		"""
 		status = 0
 		event_time = self.getEventDatetime(event_id)
-		if (datetime.now()-event_time).days >= 0:
+		if (self.getOffsetTime()-event_time).days >= 0:
 			status = 2
 
 		command = "INSERT INTO {0}(chat_id, event_id, status) VALUES ({1},{2},{3});".format(SUBSCRIPTIONS_TABLE_NAME,
