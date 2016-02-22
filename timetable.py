@@ -90,9 +90,7 @@ class TimetableDatabase(object):
 			event_split = re.split("#", day)
 			date = event_split.pop(0)
 			for event in event_split:
-				print("event\n", event)#debug
 				event_data_split = re.split("@@", event)
-				print("event_data_split", event_data_split)
 				result_parse += [parse_processor(date, event_data_split[0],event_data_split[1],
 												event_data_split[2],event_data_split[3],
 												event_data_split[4]

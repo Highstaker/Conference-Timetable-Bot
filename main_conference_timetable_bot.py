@@ -10,9 +10,10 @@ from serverparams import ServerParameters
 from telegramHigh import telegramHigh
 from textual_data import *
 from timetable import TimetableDatabase
+from tracebackprinter import full_traceback
 from usersparams import UserParams
 
-VERSION_NUMBER = (0, 2, 4)
+VERSION_NUMBER = (0, 3, 0)
 
 # The folder containing the script itself
 SCRIPT_FOLDER = path.dirname(path.realpath(__file__))
@@ -176,6 +177,7 @@ class ConferenceTimetableBot(object):
 							)
 		elif TimetableDatabase.isDate(message):
 			# it is a date, show day timetable
+			print('message', message)
 			response = lS(CURRENT_TIME_MESSAGE).format(self.timetable_db.getOffsetTime().strftime("%H:%M")) \
 			+ "\n\n" \
 			+ self.timetable_db.getDayTimetable(message)
@@ -183,6 +185,18 @@ class ConferenceTimetableBot(object):
 							, message=response
 							, key_markup=MMKM
 							)
+			#If a graphical file in format YYYY-MM-DD.png exists, send it as well
+			try:
+				filepath = path.join(SCRIPT_FOLDER, message) + ".png"
+				with open(filepath, "rb") as pic:
+						bot.sendPic(chat_id=chat_id
+						, pic=pic
+						, caption=message
+								)
+			except FileNotFoundError as e:
+				print("Graph file not found")
+				print(full_traceback())
+
 		elif message in allv(ALL_DAYS_BUTTON):
 			# it is a date, show day timetable
 			response = lS(CURRENT_TIME_MESSAGE).format(self.timetable_db.getOffsetTime().strftime("%H:%M")) \
@@ -290,17 +304,23 @@ class ConferenceTimetableBot(object):
 				full_path = path.join(TEMP_FOLDER, EVENT_TIMETABLE_FILENAME)
 				bot.downloadFile(bot.getFileID(u), full_path)
 
-				with open(full_path, "r") as f:
-					data = f.read()
-					print(data)
-					self.timetable_db.parseTimetable(data)
+				try:
+					with open(full_path, "r") as f:
+						data = f.read()
+						print(data)
+						self.timetable_db.parseTimetable(data)
 
-				os.remove(full_path)
+					os.remove(full_path)
 
-				bot.sendMessage(chat_id=chat_id
-							, message="Events added!"
-							, key_markup=MMKM
-							)
+					bot.sendMessage(chat_id=chat_id
+								, message="Events added!"
+								, key_markup=MMKM
+								)
+				except IndexError:
+						bot.sendMessage(chat_id=chat_id
+								, message="Parsing failed! Are all fields present in the file?"
+								, key_markup=MMKM
+								)
 		elif re.match("^TZ(\+|-)([0-9]|[0-1][0-9]|2[0-3])$", message):
 			# Setting the timezone parameter
 			timezone = int(message[2:])
