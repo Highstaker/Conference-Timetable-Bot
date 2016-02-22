@@ -5,6 +5,8 @@
 # FILENAMES###
 ##############
 
+SERVER_PARAMS_SAVEFILE_NAME = "Conference_timetable_bot_server_parameters.save"
+
 MAP_FILENAME = "map.png"
 EVENT_TIMETABLE_FILENAME = "timetable.txt"
 
@@ -19,6 +21,9 @@ OTHER_BOTS_BUTTON = {"EN": "👾 My other bots", "RU": "👾 Другие мои
 MAP_BUTTON = {"EN": "Map", "RU": "Карта"}
 GET_TIMETABLE_BUTTON = {"EN": "Show timetable", "RU": "Показать расписание"}
 ALL_DAYS_BUTTON = {"EN": "All days", "RU": "Все дни"}
+SUBSCRIBE_BUTTON = {"EN": "Subscribe", "RU": "Подписаться"}
+UNSUBSCRIBE_BUTTON = {"EN": "Unsubscribe", "RU": "Отписаться"}
+MY_EVENTS_BUTTON = {"EN": "My events", "RU": "Мой список событий"}
 
 EN_LANG_BUTTON = "🇬🇧 EN"
 RU_LANG_BUTTON = "🇷🇺 RU"
@@ -30,6 +35,12 @@ OTHER_BOTS_MESSAGE = "Other bots"
 MAP_MESSAGE = "Map message"
 NO_MAP_FILE_MESSAGE = {"EN": "No map found", "RU": "Карта не найдена"}
 GET_TIMETABLE_MESSAGE = {"EN": "Choose a day", "RU": "Выберите день"}
+SUBSCRIBED_MESSAGE = "You have subscribed to event reminders."
+ALREADY_SUBSCRIBED_MESSAGE = "You are already subscribed!"
+UNSUBSCRIBED_MESSAGE = "You have unsubscribed to event reminders."
+ALREADY_UNSUBSCRIBED_MESSAGE = "You are already unsubscribed!"
+EVENT_NOT_FOUND_MESSAGE = {"EN": "Event not found!", "RU": "Мероприятие не найдено!"}
+CURRENT_TIME_MESSAGE = {"EN": "Current time: {0}", "RU": "Текущее время: {0}"}
 
 ##################
 # DICTIONARIES####
