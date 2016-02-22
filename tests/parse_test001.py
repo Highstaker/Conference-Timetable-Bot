@@ -21,12 +21,6 @@ def parseTimetable(data):
 
 	print('parse \n', parse)#debug
 
-	# split parts by days
-	# the parts overlap with ## so (?=(something)) assures that overlapped parts are processed
-	# DAY_TIMETABLE_PATTERN = "(?=(#{2}([^#].*)#{2}))"
-	# day_searcher = re.compile(DAY_TIMETABLE_PATTERN, flags=re.DOTALL)
-	# day_split = day_searcher.findall(parse)
-
 	day_split = filter(None, re.split("##", parse))
 
 	# print("day_split", day_split)#debug
@@ -58,28 +52,6 @@ def parseTimetable(data):
 											)]
 
 	print('result_parse', result_parse)
-
-
-	# grouped_parse = []
-	# date = None
-	# for i in parse:
-	# 	if re.match(DATE_LINE_PATTERN, i, flags=re.DOTALL):
-	# 		#it's a date, store it temporarily
-	# 		print("date", i)#debug
-	# 		date = i[2:]
-	# 	elif re.match("^#([^#].*@@.*@@.*@@.*@@.*)",i):
-	# 		print("event", i)#debug
-	# 		# it's an event, parse it with the current stored date
-	# 		if date:
-	# 			event = i[1:].split("@@")
-	# 			grouped_parse += [dict(date=date, time=event[0],
-	# 								name=event[1], desc=event[2], location=event[3], author=event[4])]
-	#
-	# print('grouped_parse', grouped_parse)#debug
-
-	# for i in grouped_parse:
-	# 	print(dict(date=i['date'], time=i['time'], name=i['name'],
-	# 					 desc=i['desc'], location=i['location'], author=i['author']))
 
 data = """##2016-02-19
 	#14:00@@Dinner@@Nomnom time@@Dining room@@Da'wg

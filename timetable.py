@@ -71,17 +71,7 @@ class TimetableDatabase(object):
 		# Removing empty lines and leading/trailing spaces/tabs/etc
 		parse = "\n".join([i.strip(" \t\r") for i in data.split("\n") if i.strip(" \t\r")])
 
-		print('parse \n', parse)#debug
-
-		# split parts by days
-		# the parts overlap with ## so (?=(something)) assures that overlapped parts are processed
-		# DAY_TIMETABLE_PATTERN = "(?=(#{2}([^#].*)#{2}))"
-		# day_searcher = re.compile(DAY_TIMETABLE_PATTERN, flags=re.DOTALL)
-		# day_split = day_searcher.findall(parse)
-
 		day_split = filter(None, re.split("##", parse))
-
-		# print("day_split", day_split)#debug
 
 		parse_processor = lambda event_date='', \
 								event_time='', \
@@ -96,7 +86,6 @@ class TimetableDatabase(object):
 								, author=author.strip('\n\t\r '))
 
 		result_parse = []
-		date = None
 		for day in day_split:
 			event_split = re.split("#", day)
 			date = event_split.pop(0)
@@ -109,13 +98,15 @@ class TimetableDatabase(object):
 												event_data_split[4]
 												)]
 
-		print('result_parse', result_parse)
-
 		for i in result_parse:
 			self.createEvent(date=i['date'], time=i['time'], name=i['name'],
 							 desc=i['desc'], location=i['location'], author=i['author'])
 
 	def getDates(self):
+		"""
+		Returns a list of all dates present in the timetable
+		:return:
+		"""
 		command = "SELECT DISTINCT date(event_time) FROM {0};".format(TABLE_NAME)
 
 		dates = self._run_command(command)
@@ -270,9 +261,11 @@ ORDER BY date(event_time) DESC;
 		"""
 		data = self.getUserTimetableData(chat_id)
 
-
-
 	def getAllDaysTimetable(self):
+		"""
+		Returns a string representation of timetable for all days.
+		:return:
+		"""
 		dates = self.getDates()
 
 		result = ""
@@ -280,7 +273,6 @@ ORDER BY date(event_time) DESC;
 			result += self.getDayTimetable(date)
 
 		return result
-
 
 	def _createTable(self):
 		"""
@@ -307,12 +299,16 @@ ORDER BY date(event_time) DESC;
 		self._run_command(command)
 
 	def getUnnotifiedSubscriptions(self):
+		"""
+		Returns all subscription that have not been notified yet.
+		:return:
+		"""
 		command = """SELECT {0}.chat_id, {0}.event_id, {0}.status, {1}.event_time FROM {0}
 JOIN {1} ON {0}.event_id={1}.id
 WHERE status!=2;""".format(SUBSCRIPTIONS_TABLE_NAME, TABLE_NAME)
 
 		data = self._run_command(command)
-		print("getUnnotifiedSubscriptions", data)#debug
+		# print("getUnnotifiedSubscriptions", data)#debug
 		return data
 
 	def addSubscription(self, chat_id, event_id):
@@ -396,20 +392,3 @@ VALUES ('{1}','{2}','{3}','{4}','{5}');
 		conn.close()
 
 		return data
-
-if __name__ == '__main__':
-	T = TimetableDatabase("timetable")
-
-	data = """##2016/02/16
-	#14:00@@Dinner@@Nomnom time@@Dining room
-	#16:00@@Day nap@@ZZZZZ time@@Couch
-	#18:00@@Tea time@@Drinking tea@@Living room
-	##2016/02/17
-	 #14:00@@Dinner@@Nomnom time again@@Dining room
-	#15:59@@Day nap@@ZZZZZ time. AGAIN!@@Couch
-	  #18:00@@Tea time@@Drinking tea. As usual.@@Living room
-
-	"""
-
-	# T.parseTimetable(data)
-
