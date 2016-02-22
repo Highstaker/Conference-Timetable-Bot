@@ -13,7 +13,7 @@ from timetable import TimetableDatabase
 from tracebackprinter import full_traceback
 from usersparams import UserParams
 
-VERSION_NUMBER = (0, 3, 0)
+VERSION_NUMBER = (0, 3, 1)
 
 # The folder containing the script itself
 SCRIPT_FOLDER = path.dirname(path.realpath(__file__))
@@ -22,7 +22,7 @@ SCRIPT_FOLDER = path.dirname(path.realpath(__file__))
 TEMP_FOLDER = "/tmp"
 
 INITIAL_SUBSCRIBER_PARAMS = {"lang": "EN",  # bot's langauge
-							"Admin": 0,
+							"admin": 0,
 							 "remind_period": 0, # remind this amount of minutes before the event
 							 "subscribed": 0 # is the user subscribed to event reminders?
 							}
@@ -298,7 +298,7 @@ class ConferenceTimetableBot(object):
 							)
 
 		# admin tools
-		elif bot.isDocument(u):
+		elif bot.isDocument(u) and self.user_params.getEntry(chat_id, 'admin') == 1:
 			# check if it is a timetable
 			if bot.getDocumentFileName(u) == EVENT_TIMETABLE_FILENAME:
 				full_path = path.join(TEMP_FOLDER, EVENT_TIMETABLE_FILENAME)
@@ -321,12 +321,19 @@ class ConferenceTimetableBot(object):
 								, message="Parsing failed! Are all fields present in the file?"
 								, key_markup=MMKM
 								)
-		elif re.match("^TZ(\+|-)([0-9]|[0-1][0-9]|2[0-3])$", message):
+		elif re.match("^TZ(\+|-)([0-9]|[0-1][0-9]|2[0-3])$", message) and self.user_params.getEntry(chat_id, 'admin') == 1:
 			# Setting the timezone parameter
 			timezone = int(message[2:])
 			self.server_params.setParam('timezone', timezone)
 			bot.sendMessage(chat_id=chat_id
 							, message="Timezone set to UTC{0}{1}".format("+" if timezone >= 0 else "", timezone)
+							, key_markup=MMKM
+							)
+		elif message == "/revoke" and self.user_params.getEntry(chat_id, 'admin') == 1:
+			# revoke admin rights
+			self.user_params.setEntry(chat_id, 'admin', 0)
+			bot.sendMessage(chat_id=chat_id
+							, message="Admin rights revoked"
 							, key_markup=MMKM
 							)
 		else:
