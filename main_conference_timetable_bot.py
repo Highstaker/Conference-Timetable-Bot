@@ -13,7 +13,7 @@ from timetable import TimetableDatabase
 from tracebackprinter import full_traceback
 from usersparams import UserParams
 
-VERSION_NUMBER = (0, 3, 1)
+VERSION_NUMBER = (0, 3, 2)
 
 # The folder containing the script itself
 SCRIPT_FOLDER = path.dirname(path.realpath(__file__))
@@ -300,7 +300,7 @@ class ConferenceTimetableBot(object):
 		# admin tools
 		elif bot.isDocument(u) and self.user_params.getEntry(chat_id, 'admin') == 1:
 			# check if it is a timetable
-			if bot.getDocumentFileName(u) == EVENT_TIMETABLE_FILENAME:
+			if re.search("^.*{0}$".format(EVENT_TIMETABLE_FILENAME), bot.getDocumentFileName(u)):
 				full_path = path.join(TEMP_FOLDER, EVENT_TIMETABLE_FILENAME)
 				bot.downloadFile(bot.getFileID(u), full_path)
 
