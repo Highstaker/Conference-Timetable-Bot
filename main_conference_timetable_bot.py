@@ -12,7 +12,7 @@ from textual_data import *
 from timetable import TimetableDatabase
 from usersparams import UserParams
 
-VERSION_NUMBER = (0, 2, 3)
+VERSION_NUMBER = (0, 2, 4)
 
 # The folder containing the script itself
 SCRIPT_FOLDER = path.dirname(path.realpath(__file__))
