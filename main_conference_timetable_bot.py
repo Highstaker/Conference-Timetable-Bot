@@ -13,13 +13,10 @@ from timetable import TimetableDatabase
 from tracebackprinter import full_traceback
 from usersparams import UserParams
 
-VERSION_NUMBER = (0, 4, 1)
+VERSION_NUMBER = (0, 4, 2)
 
 # The folder containing the script itself
 SCRIPT_FOLDER = path.dirname(path.realpath(__file__))
-
-# A temporary folder where files will be saved for processing
-TEMP_FOLDER = "/tmp"
 
 INITIAL_SUBSCRIBER_PARAMS = {"lang": "EN",  # bot's langauge
 							"admin": 0,
@@ -244,7 +241,19 @@ class ConferenceTimetableBot(object):
 							)
 		elif message == "my_events" or message in allv(MY_EVENTS_BUTTON):
 			# show a table of events to which a user is subscribed
-			self.timetable_db.getUserTimetable(chat_id=chat_id)
+			user_timetable = self.timetable_db.getUserTimetable(chat_id=chat_id)
+			if user_timetable:
+				response = lS(CURRENT_TIME_MESSAGE).format(self.timetable_db.getOffsetTime().strftime("%H:%M")) \
+				+ "\n\n" \
+				+ self.timetable_db.getUserTimetable(chat_id=chat_id)
+			else:
+				response = "Your personal timetable is empty!"
+
+			bot.sendMessage(chat_id=chat_id
+				, message=response
+				, key_markup=MMKM
+				)
+
 		elif re.match("^/sub[0-9]+$",message):
 			event_index = message[4:]
 			if self.timetable_db.eventIndexExists(event_index):
@@ -295,6 +304,7 @@ class ConferenceTimetableBot(object):
 		elif bot.isDocument(u) and self.user_params.getEntry(chat_id, 'admin') == 1:
 			# check if it is a timetable
 			if re.search("^.*{0}$".format(EVENT_TIMETABLE_FILENAME), bot.getDocumentFileName(u)):
+				# It's a text file with timetable
 				full_path = path.join(TEMP_FOLDER, EVENT_TIMETABLE_FILENAME)
 				bot.downloadFile(bot.getFileID(u), full_path)
 
@@ -315,6 +325,19 @@ class ConferenceTimetableBot(object):
 								, message="Parsing failed! Are all fields present in the file?"
 								, key_markup=MMKM
 								)
+			if re.search("^.*{0}$".format(EVENT_TIMETABLE_XLS_FILENAME), bot.getDocumentFileName(u)):
+				# It's a XLS sheet with a timetable
+				full_path = path.join(TEMP_FOLDER, EVENT_TIMETABLE_XLS_FILENAME)
+				bot.downloadFile(bot.getFileID(u), full_path)
+
+				self.timetable_db.parseTimetableXLS(full_path)
+				os.remove(full_path)
+
+				bot.sendMessage(chat_id=chat_id
+								, message="Events added!"
+								, key_markup=MMKM
+								)
+
 		elif re.match("^TZ(\+|-)([0-9]|[0-1][0-9]|2[0-3])$", message) and self.user_params.getEntry(chat_id, 'admin') == 1:
 			# Setting the timezone parameter
 			timezone = int(message[2:])

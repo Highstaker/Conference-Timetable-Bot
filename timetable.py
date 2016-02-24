@@ -5,6 +5,7 @@ import sqlite3
 import re
 from datetime import datetime, timedelta
 from os import path
+import xlrd
 
 from textual_data import EVENT_NOT_FOUND_MESSAGE, DATABASES_FOLDER_NAME
 
@@ -109,6 +110,53 @@ class TimetableDatabase(object):
 							 desc=i['desc'], location=i['location'], author=i['author'],
 							 end_time=i['end_time'], event_type=i['event_type'])
 
+	def parseTimetableXLS(self, filename):
+		book = xlrd.open_workbook(filename)
+		sheet = book.sheet_by_index(0)
+
+		date = ""
+		result_parse = []
+		for event in range(1, sheet.nrows):
+			cells = sheet.row_values(event)
+			# print('len(cells)', len(cells))#debug
+			event_data = dict()
+
+			for n, cell in enumerate(cells):
+				if n == 0:
+					#A date
+					if cell:
+						# store date for use with other events on this day
+						date = cell
+					event_data['date'] = date
+				if n == 1:
+					# start time
+					event_data['time'] = cell
+				if n == 2:
+					# end time
+					event_data['end_time'] = cell
+				if n == 3:
+					# Name of the event
+					event_data['name'] = cell
+				if n == 4:
+					# Event description
+					event_data['desc'] = cell
+				if n == 5:
+					# event location
+					event_data['location'] = cell
+				if n == 6:
+					# event type
+					event_data['event_type'] = cell
+				if n == 7:
+					# The person who holds this event
+					event_data['author'] = cell
+
+			result_parse += [event_data]
+
+		for i in result_parse:
+			self.createEvent(date=i['date'], time=i['time'], name=i['name'],
+							 desc=i['desc'], location=i['location'], author=i['author'],
+							 end_time=i['end_time'], event_type=i['event_type'])
+
 	def getDates(self):
 		"""
 		Returns a list of all dates present in the timetable
@@ -162,12 +210,14 @@ WHERE chat_id={2} AND event_id={3};""".format(SUBSCRIPTIONS_TABLE_NAME,status,ch
 		command = """SELECT event_name, time(event_time), location, description, date(event_time), author,
 					time(end_time), event_type
 			  		FROM {0} WHERE id={1};""".format(TABLE_NAME,id)
-		data = self._run_command(command)
+		data = self._run_command(command)[0]
+		data = [i if not i is None else "" for i in data]
+		print(data)#debug
 
 		if data:
-			return dict(id=id,name=data[0][0],time=data[0][1][:5],  # time without seconds
-						location=data[0][2],desc=data[0][3],date=data[0][4],author=data[0][5],end_time=data[0][6],
-						event_type=data[0][7])
+			return dict(id=id,name=data[0],time=data[1][:5],  # time without seconds
+						location=data[2],desc=data[3],date=data[4],author=data[5],end_time=data[6],
+						event_type=data[7])
 		else:
 			return None
 
@@ -200,13 +250,16 @@ WHERE chat_id={2} AND event_id={3};""".format(SUBSCRIPTIONS_TABLE_NAME,status,ch
 		data = self.getEventData(id)
 
 		if data:
-			duration = round(
-			round(
-			(self.stringTimeToDatetime(data['date'] + " " + data['end_time'][:5])
-			- self.stringTimeToDatetime(data['date'] + " " + data['time'][:5])
-			).seconds/60
-			)/60
-			,1)
+			duration = ""
+			if data['end_time']:
+				duration = round(
+							round(
+							(self.stringTimeToDatetime(data['date'] + " " + data['end_time'][:5])
+							- self.stringTimeToDatetime(data['date'] + " " + data['time'][:5])
+							).seconds/60
+							)/60
+							,1)
+
 
 			result = """{0}
 Date: {4}
@@ -281,6 +334,13 @@ ORDER BY date(event_time) DESC;
 		:return: string timetable
 		"""
 		data = self.getUserTimetableData(chat_id)
+
+		result = ""
+		if data:
+			result += "\n".join(["/event{0} {1} {2}".format(i[0], i[2], i[1]) for i in data])
+
+		return result
+
 
 	def getAllDaysTimetable(self):
 		"""
@@ -407,7 +467,8 @@ WHERE status!=2;""".format(SUBSCRIPTIONS_TABLE_NAME, TABLE_NAME)
 
 		timestamp = (date + " " + time) if time else ""
 		end_timestamp = (date + " " + end_time) if end_time else ""
-		end_timestamp = checkEndDate(timestamp,end_timestamp)
+		if end_timestamp:
+			end_timestamp = checkEndDate(timestamp,end_timestamp)
 
 		command = """INSERT INTO {0}(event_time, event_name, description, location, author, end_time, event_type)
 VALUES ('{1}','{2}','{3}','{4}','{5}','{6}','{7}');
