@@ -13,7 +13,7 @@ from timetable import TimetableDatabase
 from tracebackprinter import full_traceback
 from usersparams import UserParams
 
-VERSION_NUMBER = (0, 3, 2)
+VERSION_NUMBER = (0, 4, 0)
 
 # The folder containing the script itself
 SCRIPT_FOLDER = path.dirname(path.realpath(__file__))
@@ -210,20 +210,13 @@ class ConferenceTimetableBot(object):
 		elif re.match("^/event[0-9]+$", message):
 			# Event link is pressed
 			event_info = self.timetable_db.getEventInfo(message[6:])
-			if event_info:
-				response = lS(CURRENT_TIME_MESSAGE).format(self.timetable_db.getOffsetTime().strftime("%H:%M")) \
-				+ "\n\n" \
-				+ event_info
-				bot.sendMessage(chat_id=chat_id
-							, message=response
-							, key_markup=MMKM
-							)
-			else:
-				bot.sendMessage(chat_id=chat_id
-							, message=lS(EVENT_NOT_FOUND_MESSAGE)
-							, key_markup=MMKM
-							, reply_to=message_id
-							)
+			response = lS(CURRENT_TIME_MESSAGE).format(self.timetable_db.getOffsetTime().strftime("%H:%M")) \
+			+ "\n\n" \
+			+ lS(event_info)
+			bot.sendMessage(chat_id=chat_id
+						, message=response
+						, key_markup=MMKM
+						)
 		elif message == "/subscribe" or message in allv(SUBSCRIBE_BUTTON):
 			if self.user_params.getEntry(chat_id, "subscribed") == 0:
 				self.user_params.setEntry(chat_id, "subscribed", 1)

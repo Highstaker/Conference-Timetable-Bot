@@ -4,8 +4,9 @@
 import sqlite3
 import re
 from datetime import datetime, timedelta
-
 from os import path
+
+from textual_data import EVENT_NOT_FOUND_MESSAGE
 
 # The folder containing the script itself
 SCRIPT_FOLDER = path.dirname(path.realpath(__file__))
@@ -54,6 +55,7 @@ class TimetableDatabase(object):
 		"""
 		return self.getUTCdatetime() + timedelta(hours=self.server_params.getParam('timezone'))
 
+	# noinspection PyUnnecessaryBackslash
 	def parseTimetable(self, data):
 		"""
 		Parses the text data into the database
@@ -78,12 +80,17 @@ class TimetableDatabase(object):
 								event_name='', \
 								description='', \
 								location='', \
-								author='': dict(date=event_date.strip('\n\t\r ')
+								author='',\
+								end_time = '',\
+								event_type = '': dict(date=event_date.strip('\n\t\r ')
 								, time=event_time.strip('\n\t\r ')
 								, name=event_name.strip('\n\t\r ')
 								, desc=description.strip('\n\t\r ')
 								, location=location.strip('\n\t\r ')
-								, author=author.strip('\n\t\r '))
+								, author=author.strip('\n\t\r ')
+								, end_time=end_time.strip('\n\t\r ')
+								, event_type=event_type.strip('\n\t\r ')
+													  )
 
 		result_parse = []
 		for day in day_split:
@@ -93,12 +100,14 @@ class TimetableDatabase(object):
 				event_data_split = re.split("@@", event)
 				result_parse += [parse_processor(date, event_data_split[0],event_data_split[1],
 												event_data_split[2],event_data_split[3],
-												event_data_split[4]
+												event_data_split[4],event_data_split[5],
+												event_data_split[6]
 												)]
 
 		for i in result_parse:
 			self.createEvent(date=i['date'], time=i['time'], name=i['name'],
-							 desc=i['desc'], location=i['location'], author=i['author'])
+							 desc=i['desc'], location=i['location'], author=i['author'],
+							 end_time=i['end_time'], event_type=i['event_type'])
 
 	def getDates(self):
 		"""
@@ -150,13 +159,15 @@ WHERE chat_id={2} AND event_id={3};""".format(SUBSCRIPTIONS_TABLE_NAME,status,ch
 		:param id: even ID
 		:return:
 		"""
-		command = """SELECT event_name, time(event_time), location, description, date(event_time), author
-				  FROM {0} WHERE id={1};""".format(TABLE_NAME,id)
+		command = """SELECT event_name, time(event_time), location, description, date(event_time), author,
+					time(end_time), event_type
+			  		FROM {0} WHERE id={1};""".format(TABLE_NAME,id)
 		data = self._run_command(command)
 
 		if data:
 			return dict(id=id,name=data[0][0],time=data[0][1][:5],  # time without seconds
-					location=data[0][2],desc=data[0][3],date=data[0][4],author=data[0][5])
+						location=data[0][2],desc=data[0][3],date=data[0][4],author=data[0][5],end_time=data[0][6],
+						event_type=data[0][7])
 		else:
 			return None
 
@@ -189,18 +200,30 @@ WHERE chat_id={2} AND event_id={3};""".format(SUBSCRIPTIONS_TABLE_NAME,status,ch
 		data = self.getEventData(id)
 
 		if data:
+			duration = round(
+			round(
+			(self.stringTimeToDatetime(data['date'] + " " + data['end_time'][:5])
+			- self.stringTimeToDatetime(data['date'] + " " + data['time'][:5])
+			).seconds/60
+			)/60
+			,1)
+
 			result = """{0}
-Time: {1} {4}
+Date: {4}
+Time: {1} - {6}
+Duration: {8} h.
 Held by: {5}
+Type: {7}
 Location: {2}
 
 {3}
 
 To subscribe to this event, type or click the link:
-/sub{6}
-""".format(data['name'], data['time'][:5],data['location'],data['desc'],data['date'],data['author'],id)
+/sub{9}
+""".format(data['name'], data['time'][:5],data['location'],data['desc'],data['date'],data['author'],
+			data['end_time'][:5],data['event_type'],duration,id)
 		else:
-			result = None
+			result = EVENT_NOT_FOUND_MESSAGE
 
 		return result
 
@@ -283,7 +306,9 @@ ORDER BY date(event_time) DESC;
 								event_name TEXT,
 								description TEXT,
 								location TEXT,
-								author TEXT
+								author TEXT,
+								end_time TEXT,
+								event_type TEXT
 								);""".format(TABLE_NAME)
 
 		self._run_command(command)
@@ -351,9 +376,11 @@ WHERE status!=2;""".format(SUBSCRIPTIONS_TABLE_NAME, TABLE_NAME)
 
 		self._run_command(command)
 
-	def createEvent(self, date, time, name, desc, location, author):
+	def createEvent(self, date, time, name, desc, location, author, end_time, event_type):
 		"""
 		Creates a database entry for an even with the given parameters
+		:param event_type:
+		:param end_time:
 		:param date:
 		:param time:
 		:param name:
@@ -367,12 +394,24 @@ WHERE status!=2;""".format(SUBSCRIPTIONS_TABLE_NAME, TABLE_NAME)
 			result = text.replace("'", "''")
 			return result
 
+		def checkEndDate(ts, end_ts):
+			#If the end of event happens the next day, move the end time one day forward
+			start_dt = self.stringTimeToDatetime(ts)
+			end_dt = self.stringTimeToDatetime(end_ts)
 
-		timestamp = date + " " + time
+			if (end_dt - start_dt).days < 0:
+				end_dt += timedelta(days=1)
 
-		command = """INSERT INTO {0}(event_time, event_name, description, location, author)
-VALUES ('{1}','{2}','{3}','{4}','{5}');
-		""".format(TABLE_NAME, timestamp, pS(name), pS(desc), pS(location), pS(author))
+			return end_dt.strftime("%Y-%m-%d %H:%M")
+
+
+		timestamp = (date + " " + time) if time else ""
+		end_timestamp = (date + " " + end_time) if end_time else ""
+		end_timestamp = checkEndDate(timestamp,end_timestamp)
+
+		command = """INSERT INTO {0}(event_time, event_name, description, location, author, end_time, event_type)
+VALUES ('{1}','{2}','{3}','{4}','{5}','{6}','{7}');
+		""".format(TABLE_NAME, timestamp, pS(name), pS(desc), pS(location), pS(author), end_timestamp, pS(event_type))
 		print(command)#debug
 
 		self._run_command(command)
