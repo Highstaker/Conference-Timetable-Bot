@@ -48,6 +48,32 @@ class TimetableDatabase(object):
 		"""
 		return datetime.utcnow()
 
+	def _createTable(self):
+		"""
+		Initializes the database and the timetable
+		:return:
+		"""
+		# Create the table of events
+		command = """CREATE TABLE {0}(id INTEGER PRIMARY KEY,
+								event_time TEXT,
+								end_time TEXT,
+								event_name TEXT,
+								description TEXT,
+								location TEXT,
+								event_type TEXT,
+								author TEXT
+								);""".format(TABLE_NAME)
+
+		self._run_command(command)
+
+		# Create the table of subscriptions
+		command = """CREATE TABLE {0}(chat_id INTEGER,
+								event_id INTEGER,
+								status INTEGER
+								);""".format(SUBSCRIPTIONS_TABLE_NAME)
+
+		self._run_command(command)
+
 	def getOffsetTime(self):
 		"""
 		Returns a timedate object representing the current time with the offset from UTC specified in server parameters.
@@ -111,6 +137,11 @@ class TimetableDatabase(object):
 							 end_time=i['end_time'], event_type=i['event_type'])
 
 	def parseTimetableXLS(self, filename):
+		"""
+		Parses a XLS file to database. See the example of an XLS file.
+		:param filename: a full path to an XLS file
+		:return:
+		"""
 		book = xlrd.open_workbook(filename)
 		sheet = book.sheet_by_index(0)
 
@@ -341,7 +372,6 @@ ORDER BY date(event_time) DESC;
 
 		return result
 
-
 	def getAllDaysTimetable(self):
 		"""
 		Returns a string representation of timetable for all days.
@@ -354,32 +384,6 @@ ORDER BY date(event_time) DESC;
 			result += self.getDayTimetable(date)
 
 		return result
-
-	def _createTable(self):
-		"""
-		Initializes the database and the timetable
-		:return:
-		"""
-		# Create the table of events
-		command = """CREATE TABLE {0}(id INTEGER PRIMARY KEY,
-								event_time TEXT,
-								event_name TEXT,
-								description TEXT,
-								location TEXT,
-								author TEXT,
-								end_time TEXT,
-								event_type TEXT
-								);""".format(TABLE_NAME)
-
-		self._run_command(command)
-
-		# Create the table of subscriptions
-		command = """CREATE TABLE {0}(chat_id INTEGER,
-								event_id INTEGER,
-								status INTEGER
-								);""".format(SUBSCRIPTIONS_TABLE_NAME)
-
-		self._run_command(command)
 
 	def getUnnotifiedSubscriptions(self):
 		"""
