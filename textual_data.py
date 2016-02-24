@@ -10,6 +10,9 @@ SERVER_PARAMS_SAVEFILE_NAME = "Conference_timetable_bot_server_parameters.save"
 MAP_FILENAME = "map.png"
 EVENT_TIMETABLE_FILENAME = "timetable.txt"
 
+DATABASES_FOLDER_NAME = "databases"
+RESOURCES_FOLDER_NAME = "resources"
+
 #############
 # TEXTS######
 #############

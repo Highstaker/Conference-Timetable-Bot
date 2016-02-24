@@ -3,12 +3,15 @@
 import sqlite3
 from os import path
 
+from textual_data import DATABASES_FOLDER_NAME
+
 # The folder containing the script itself
 SCRIPT_FOLDER = path.dirname(path.realpath(__file__))
 
 TABLE_NAME = "UserParams"
 
 
+# noinspection SqlNoDataSourceInspection
 class UserParams(object):
 	"""docstring for UserParams"""
 	def __init__(self, filename, initial=None):
@@ -19,11 +22,11 @@ class UserParams(object):
 		:return:
 		"""
 		super(UserParams, self).__init__()
-		self.filename = filename + ".db"
+		self.filename = path.join(SCRIPT_FOLDER, DATABASES_FOLDER_NAME, filename + ".db")
 
 		# if database already exists, append new columns to it, if any
 		if initial:
-			if path.isfile(path.join(SCRIPT_FOLDER, self.filename)):
+			if path.isfile(self.filename):
 				for i in initial.keys():
 					self._addColumn(i, initial[i])
 			else:

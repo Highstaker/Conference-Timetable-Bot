@@ -13,7 +13,7 @@ from timetable import TimetableDatabase
 from tracebackprinter import full_traceback
 from usersparams import UserParams
 
-VERSION_NUMBER = (0, 4, 0)
+VERSION_NUMBER = (0, 4, 1)
 
 # The folder containing the script itself
 SCRIPT_FOLDER = path.dirname(path.realpath(__file__))
@@ -159,9 +159,10 @@ class ConferenceTimetableBot(object):
 							, key_markup=MMKM
 							)
 		elif message == "/map" or message in allv(MAP_BUTTON):
-			if path.isfile(path.join(SCRIPT_FOLDER, MAP_FILENAME)):
+			map_filepath = path.join(SCRIPT_FOLDER, RESOURCES_FOLDER_NAME, MAP_FILENAME)
+			if path.isfile(map_filepath):
 				bot.sendPic(chat_id=chat_id
-						, pic=open(path.join(SCRIPT_FOLDER, MAP_FILENAME), "rb")
+						, pic=open(map_filepath, "rb")
 						, caption=MAP_MESSAGE
 								)
 			else:
@@ -187,7 +188,7 @@ class ConferenceTimetableBot(object):
 							)
 			#If a graphical file in format YYYY-MM-DD.png exists, send it as well
 			try:
-				filepath = path.join(SCRIPT_FOLDER, message) + ".png"
+				filepath = path.join(SCRIPT_FOLDER, RESOURCES_FOLDER_NAME, message) + ".png"
 				with open(filepath, "rb") as pic:
 						bot.sendPic(chat_id=chat_id
 						, pic=pic

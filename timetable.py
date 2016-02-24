@@ -6,7 +6,7 @@ import re
 from datetime import datetime, timedelta
 from os import path
 
-from textual_data import EVENT_NOT_FOUND_MESSAGE
+from textual_data import EVENT_NOT_FOUND_MESSAGE, DATABASES_FOLDER_NAME
 
 # The folder containing the script itself
 SCRIPT_FOLDER = path.dirname(path.realpath(__file__))
@@ -26,10 +26,10 @@ class TimetableDatabase(object):
 		"""
 		super(TimetableDatabase, self).__init__()
 		self.server_params = server_params
-		self.filename = filename + ".db"
+		self.filename = path.join(SCRIPT_FOLDER, DATABASES_FOLDER_NAME, filename + ".db")
 
 		# if database already exists, do nothnig
-		if path.isfile(path.join(SCRIPT_FOLDER, self.filename)):
+		if path.isfile(self.filename):
 			pass
 		else:
 			#database doesn't exist, create it
