@@ -81,27 +81,32 @@ class telegramHigh:
 		"""
 
 		# let's split the message by newlines first
-		result_split = msg.split("\n")
+		message_split = msg.split("\n")
 
 		# the result will be stored here
 		broken = []
 
 		# splitting routine
-		while result_split:
-			result = ""
-			while True:
-				if result_split:
-					result += result_split.pop(0) + "\n"
-				else:
-					break
-				if len(result) > max_chars_per_message:
-					break
+		while message_split:
+			result = message_split.pop(0) + "\n"
+			if len(result) > max_chars_per_message:
+				# The chunk is huge. Split it not caring for newlines.
+				broken += [result[i:i+max_chars_per_message] for i in range(0,len(result),max_chars_per_message)]
+			else:
+				# It's a smaller chunk, append others until their sum is bigger than maximum
+				while len(result) <= max_chars_per_message:
+					if not message_split:
+						# if the original ran out
+						break
+					# check if the next chunk makes the merged chunk it too big
+					if len(result) + len(message_split[0]) <= max_chars_per_message:
+						# nope. append chunk
+						result += message_split.pop(0) + "\n"
+					else:
+						# yes, it does. Stop on this.
+						break
+				broken += [result]
 
-			if result:
-				n_parts = int(len(result) / max_chars_per_message + 1)
-
-				for i in range(n_parts):
-					broken += [result[i * len(result) // n_parts:(i + 1) * len(result) // n_parts]]
 
 		return broken
 
