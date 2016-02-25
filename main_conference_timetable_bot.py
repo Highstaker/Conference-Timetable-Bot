@@ -13,7 +13,7 @@ from timetable import TimetableDatabase
 from tracebackprinter import full_traceback
 from usersparams import UserParams
 
-VERSION_NUMBER = (0, 4, 2)
+VERSION_NUMBER = (0, 4, 3)
 
 # The folder containing the script itself
 SCRIPT_FOLDER = path.dirname(path.realpath(__file__))
@@ -86,6 +86,7 @@ class ConferenceTimetableBot(object):
 			status = event[2]
 			event_time = TimetableDatabase.stringTimeToDatetime(event[3])
 			cur_time = self.timetable_db.getOffsetTime()
+			event_name = self.timetable_db.getEventData(event_id)['name']
 
 			if status < 2:
 				# this event still has reminders
@@ -93,7 +94,7 @@ class ConferenceTimetableBot(object):
 					# Remind when an event starts
 					if self.user_params.getEntry(chat_id, 'subscribed') == 1:
 						bot.sendMessage(chat_id=chat_id
-									, message="Event {0} is starting now!".format(event_id)
+									, message="{0} is starting now! \n/event{1}".format(event_name, event_id)
 									, key_markup="Same"
 							)
 					self.timetable_db.setReminderStatus(chat_id, event_id, 2)
@@ -108,12 +109,13 @@ class ConferenceTimetableBot(object):
 					# Set status to 1 and trigger preliminary reminder
 					self.timetable_db.setReminderStatus(chat_id, event_id, 1)
 					bot.sendMessage(chat_id=chat_id
-									, message="Event {0} is starting in {1} minutes!".format(event_id,till_event_delta.seconds//60)
+									, message="{0} is starting in {2} minutes!\n/event{1}"
+									.format(event_name, event_id,till_event_delta.seconds//60)
 									, key_markup="Same"
 							)
 
 
-			#Cleanup of all status 2
+			#Cleanup of all status 2... or maybe not
 
 
 	def processUpdate(self, u):
@@ -195,7 +197,7 @@ class ConferenceTimetableBot(object):
 				print("Graph file not found")
 				print(full_traceback())
 
-		elif message in allv(ALL_DAYS_BUTTON):
+		elif message == '/all' or message in allv(ALL_DAYS_BUTTON):
 			# it is a date, show day timetable
 			response = lS(CURRENT_TIME_MESSAGE).format(self.timetable_db.getOffsetTime().strftime("%H:%M")) \
 			+ "\n\n" \
@@ -239,7 +241,7 @@ class ConferenceTimetableBot(object):
 							, message=lS(ALREADY_UNSUBSCRIBED_MESSAGE)
 							, key_markup=MMKM
 							)
-		elif message == "my_events" or message in allv(MY_EVENTS_BUTTON):
+		elif message == "/my_events" or message in allv(MY_EVENTS_BUTTON):
 			# show a table of events to which a user is subscribed
 			user_timetable = self.timetable_db.getUserTimetable(chat_id=chat_id)
 			if user_timetable:
@@ -258,16 +260,17 @@ class ConferenceTimetableBot(object):
 			event_index = message[4:]
 			if self.timetable_db.eventIndexExists(event_index):
 				# Event exists
+				event_name = self.timetable_db.getEventData(event_index)['name']
 				if not self.timetable_db.subscriptionExists(chat_id, event_index):
 					self.timetable_db.addSubscription(chat_id, event_index)
 					bot.sendMessage(chat_id=chat_id
-									, message="You have subscribed to event {0}".format(event_index)
+									, message="You have subscribed to the event: {0}".format(event_name, event_index)
 									, key_markup=MMKM
 									)
 				else:
 					self.timetable_db.deleteSubscription(chat_id,event_index)
 					bot.sendMessage(chat_id=chat_id
-									, message="Subscription to event {0} deleted!".format(event_index)
+									, message="Subscription deleted: {0}".format(event_name, event_index)
 									, key_markup=MMKM
 									)
 			else:
