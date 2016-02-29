@@ -13,7 +13,7 @@ from timetable import TimetableDatabase
 from tracebackprinter import full_traceback
 from usersparams import UserParams
 
-VERSION_NUMBER = (0, 4, 4)
+VERSION_NUMBER = (0, 4, 5)
 
 # The folder containing the script itself
 SCRIPT_FOLDER = path.dirname(path.realpath(__file__))
@@ -142,13 +142,14 @@ class ConferenceTimetableBot(object):
 							)
 		elif message == "/help" or message in allv(HELP_BUTTON):
 			bot.sendMessage(chat_id=chat_id
-							, message=lS(HELP_MESSAGE)
+							, message=lS(HELP_MESSAGE).format(lS(GET_TIMETABLE_BUTTON), lS(ALL_DAYS_BUTTON),
+															  lS(MY_EVENTS_BUTTON), lS(SUBSCRIBE_BUTTON))
 							, key_markup=MMKM
 							, markdown=True
 							)
 		elif message == "/about" or message in allv(ABOUT_BUTTON):
 			bot.sendMessage(chat_id=chat_id
-							, message=lS(ABOUT_MESSAGE)
+							, message=lS(ABOUT_MESSAGE).format(".".join([str(i) for i in VERSION_NUMBER]))
 							, key_markup=MMKM
 							, markdown=True
 							)
@@ -241,7 +242,7 @@ class ConferenceTimetableBot(object):
 							, message=lS(ALREADY_UNSUBSCRIBED_MESSAGE)
 							, key_markup=MMKM
 							)
-		elif message == "/my_events" or message in allv(MY_EVENTS_BUTTON):
+		elif message == "/myevents" or message in allv(MY_EVENTS_BUTTON):
 			# show a table of events to which a user is subscribed
 			user_timetable = self.timetable_db.getUserTimetable(chat_id=chat_id)
 			if user_timetable:
