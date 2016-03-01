@@ -13,7 +13,7 @@ from timetable import TimetableDatabase
 from tracebackprinter import full_traceback
 from usersparams import UserParams
 
-VERSION_NUMBER = (0, 4, 5)
+VERSION_NUMBER = (0, 4, 6)
 
 # The folder containing the script itself
 SCRIPT_FOLDER = path.dirname(path.realpath(__file__))
@@ -104,7 +104,7 @@ class ConferenceTimetableBot(object):
 				till_event_delta = event_time-cur_time
 				# print("till_event_delta",till_event_delta)#debug
 				if self.user_params.getEntry(chat_id,'subscribed') == 1 \
-					and till_event_delta.days >= 0 \
+					and till_event_delta.days == 0 \
 					and till_event_delta.seconds <= remind_period * 60:
 					# Set status to 1 and trigger preliminary reminder
 					self.timetable_db.setReminderStatus(chat_id, event_id, 1)
@@ -282,8 +282,22 @@ class ConferenceTimetableBot(object):
 							, reply_to=message_id
 							)
 		elif re.match("^[0-9]+$",message):
-			self.user_params.setEntry(chat_id, 'remind_period', int(message))
-			bot.sendMessage(chat_id=chat_id
+			remind_period = int(message)
+			if remind_period < 1:
+				self.user_params.setEntry(chat_id, 'remind_period', 1)
+				bot.sendMessage(chat_id=chat_id
+							, message="The minimum remind period possible is 1 minute. Setting to 1 minute."
+							, key_markup=MMKM
+							)
+			elif remind_period > 1439:
+				self.user_params.setEntry(chat_id, 'remind_period', 1439)
+				bot.sendMessage(chat_id=chat_id
+							, message="The minimum remind period possible is 1439 minutes. Setting to 1439 minutes."
+							, key_markup=MMKM
+							)
+			else:
+				self.user_params.setEntry(chat_id, 'remind_period', remind_period)
+				bot.sendMessage(chat_id=chat_id
 							, message="Preliminary reminder period has been set to {0}".format(message)
 							, key_markup=MMKM
 							)
