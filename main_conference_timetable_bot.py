@@ -13,7 +13,7 @@ from timetable import TimetableDatabase
 from tracebackprinter import full_traceback
 from usersparams import UserParams
 
-VERSION_NUMBER = (0, 4, 6)
+VERSION_NUMBER = (0, 4, 7)
 
 # The folder containing the script itself
 SCRIPT_FOLDER = path.dirname(path.realpath(__file__))
@@ -102,7 +102,6 @@ class ConferenceTimetableBot(object):
 				# preliminary reminder is not triggered yet
 				remind_period = self.user_params.getEntry(chat_id,'remind_period')
 				till_event_delta = event_time-cur_time
-				# print("till_event_delta",till_event_delta)#debug
 				if self.user_params.getEntry(chat_id,'subscribed') == 1 \
 					and till_event_delta.days == 0 \
 					and till_event_delta.seconds <= remind_period * 60:
@@ -217,6 +216,7 @@ class ConferenceTimetableBot(object):
 			bot.sendMessage(chat_id=chat_id
 						, message=response
 						, key_markup=MMKM
+						, markdown="html"
 						)
 		elif message == "/subscribe" or message in allv(SUBSCRIBE_BUTTON):
 			if self.user_params.getEntry(chat_id, "subscribed") == 0:

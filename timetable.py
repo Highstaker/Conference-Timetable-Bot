@@ -96,7 +96,6 @@ class TimetableDatabase(object):
 		:return:
 		"""
 
-		# print(data)#debug
 		# Removing empty lines and leading/trailing spaces/tabs/etc
 		parse = "\n".join([i.strip(" \t\r") for i in data.split("\n") if i.strip(" \t\r")])
 
@@ -149,7 +148,6 @@ class TimetableDatabase(object):
 		result_parse = []
 		for event in range(1, sheet.nrows):
 			cells = sheet.row_values(event)
-			# print('len(cells)', len(cells))#debug
 			event_data = dict()
 
 			for n, cell in enumerate(cells):
@@ -243,7 +241,6 @@ WHERE chat_id={2} AND event_id={3};""".format(SUBSCRIPTIONS_TABLE_NAME,status,ch
 			  		FROM {0} WHERE id={1};""".format(TABLE_NAME,id)
 		data = self._run_command(command)[0]
 		data = [i if not i is None else "" for i in data]
-		print(data)#debug
 
 		if data:
 			return dict(id=id,name=data[0],time=data[1][:5],  # time without seconds
@@ -291,18 +288,17 @@ WHERE chat_id={2} AND event_id={3};""".format(SUBSCRIPTIONS_TABLE_NAME,status,ch
 							)/60
 							,1)
 
-
-			result = """{0}
-Date: {4}
-Time: {1} - {6}
-Duration: {8} h.
-Held by: {5}
-Type: {7}
-Location: {2}
+			result = """<b>{0}</b>
+<i>Date:</i> {4}
+<i>Time:</i> {1} - {6}
+<i>Duration:</i> {8} h.
+<i>Held by:</i> {5}
+<i>Type:</i> {7}
+<i>Location:</i> {2}
 
 {3}
 
-To subscribe to this event, type or click the link:
+<b>To subscribe to this event, type or click the link:</b>
 /sub{9}
 """.format(data['name'], data['time'][:5],data['location'],data['desc'],data['date'],data['author'],
 			data['end_time'][:5],data['event_type'],duration,id)
@@ -334,7 +330,6 @@ WHERE date(event_time)=date('{1}')
 ORDER BY time(event_time);""".format(TABLE_NAME, date)
 
 		data = self._run_command(command)
-		print("getDayTimetable", data)#debug
 
 		result = date + ":\n\n"
 		result += "\n".join(["/event{0} {1} {2}".format(i[0], i[1], i[2]) for i in data])
@@ -353,8 +348,6 @@ ORDER BY date(event_time) DESC;
 """.format(TABLE_NAME, SUBSCRIPTIONS_TABLE_NAME, chat_id)
 
 		data = self._run_command(command)
-
-		print('getUserTimetable', data)#debug
 
 		return data
 
@@ -395,7 +388,6 @@ JOIN {1} ON {0}.event_id={1}.id
 WHERE status!=2;""".format(SUBSCRIPTIONS_TABLE_NAME, TABLE_NAME)
 
 		data = self._run_command(command)
-		# print("getUnnotifiedSubscriptions", data)#debug
 		return data
 
 	def addSubscription(self, chat_id, event_id):
@@ -477,7 +469,6 @@ WHERE status!=2;""".format(SUBSCRIPTIONS_TABLE_NAME, TABLE_NAME)
 		command = """INSERT INTO {0}(event_time, event_name, description, location, author, end_time, event_type)
 VALUES ('{1}','{2}','{3}','{4}','{5}','{6}','{7}');
 		""".format(TABLE_NAME, timestamp, pS(name), pS(desc), pS(location), pS(author), end_timestamp, pS(event_type))
-		print(command)#debug
 
 		self._run_command(command)
 

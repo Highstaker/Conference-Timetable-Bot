@@ -110,7 +110,7 @@ class telegramHigh:
 
 		return broken
 
-	def sendMessage(self, chat_id, message, key_markup="SAME", keyboard_short=True, preview=True, markdown=False, reply_to=None):
+	def sendMessage(self, chat_id, message, key_markup="SAME", keyboard_short=True, preview=True, markdown=None, reply_to=None):
 		"""
 		Sends a text message to Telegram user
 		:param keyboard_short: If True, the buttons on custom keyboard will be lower in height.
@@ -122,8 +122,9 @@ class telegramHigh:
 		If None, hide the custom keyboard.
 		:param preview: Should a link in a message generate a page preview within a message?
 		:type preview: bool
-		:param markdown: Should a message support markdown formatting?
-		:type markdown: bool
+		:param markdown: Should a message support markdown formatting or htmls formatting?
+		Pass "html" for HTML formatting, or True for markdown formatting.
+		:type markdown: str
 		:param reply_to: An id of an existing message. A sent message will be a reply to that message.
 		:return: None
 		"""
@@ -135,6 +136,12 @@ class telegramHigh:
 			else:
 				return telegram.ReplyKeyboardMarkup(m, resize_keyboard=keyboard_short)
 
+		markdown_mode = None
+		if markdown == "html":
+			markdown_mode = telegram.ParseMode.HTML
+		elif markdown:
+			markdown_mode = telegram.ParseMode.MARKDOWN
+
 		logging.warning("Replying to " + str(chat_id) + ": " + message)
 		fulltext = self.breakLongMessage(message)
 		for text in fulltext:
@@ -145,7 +152,7 @@ class telegramHigh:
 						self.bot.sendChatAction(chat_id, telegram.ChatAction.TYPING)
 						self.bot.sendMessage(chat_id=chat_id,
 											text=text,
-											parse_mode='Markdown' if markdown else None,
+											parse_mode=markdown_mode,
 											disable_web_page_preview=(not preview),
 											reply_markup=markup(key_markup),
 											reply_to_message_id=reply_to
